@@ -1,202 +1,128 @@
+import json
 import os
 import time
-from google import genai
-from pydantic import ValidationError
-from app.schemas.summary import SectionSummary, OverviewResponse
+from collections.abc import Iterator
+
+from openai import OpenAI
+
 from app.schemas.flashcard import FlashcardList
 from app.schemas.quiz import QuizData
+from app.schemas.summary import OverviewResponse, SectionSummary
+from app.config import settings
+
+MODEL = settings.OPENAI_MODEL
+
+
+def _client() -> OpenAI:
+    api_key = settings.OPENAI_API_KEY
+    if not api_key or api_key == "ISI_OPENAI_API_KEY_DI_SINI":
+        raise ValueError("OPENAI_API_KEY belum di-set di file .env")
+    return OpenAI(api_key=api_key, base_url=settings.OPENAI_BASE_URL)
+
+
+def _strict_schema(schema: type) -> dict:
+    result = schema.model_json_schema()
+
+    def fix_objects(value):
+        if isinstance(value, dict):
+            if value.get("type") == "object":
+                value["additionalProperties"] = False
+            for child in value.values():
+                fix_objects(child)
+        elif isinstance(value, list):
+            for child in value:
+                fix_objects(child)
+
+    fix_objects(result)
+    return result
+
+
+def _json_completion(prompt: str, schema: type, temperature: float):
+    response = _client().chat.completions.create(
+        model=MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        response_format={
+            "type": "json_schema",
+            "json_schema": {
+                "name": schema.__name__,
+                "strict": True,
+                "schema": _strict_schema(schema),
+            },
+        },
+        temperature=temperature,
+    )
+    return schema.model_validate_json(response.choices[0].message.content)
+
+
+def _retry(prompt: str, schema: type, temperature: float, max_retries: int):
+    for attempt in range(max_retries + 1):
+        try:
+            return _json_completion(prompt, schema, temperature)
+        except Exception as error:
+            if attempt >= max_retries:
+                raise Exception(f"Gagal memanggil OpenAI API setelah {max_retries} kali retry: {error}") from error
+            print(f"[AI Service] OpenAI gagal. Mencoba lagi dalam 3 detik... (Percobaan ke-{attempt + 2})")
+            time.sleep(3)
+
 
 def summarize_section(text_chunk: str, max_retries: int = 2) -> SectionSummary:
-    """
-    Mengirim 1 chunk teks ke Gemini untuk diringkas.
-    Akan mencoba ulang (retry) jika server sibuk atau JSON rusak.
-    """
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY belum di-set di file .env")
-
-    client = genai.Client(api_key=api_key)
-    
     prompt = f"""
-    Kamu adalah asisten dosen yang ahli dalam meringkas materi kuliah.
-    Analisis teks materi berikut dan buat ringkasan terstruktur.
-    
-    Materi:
-    {text_chunk}
-    """
-    
-    for attempt in range(max_retries + 1):
-        try:
-            response = client.models.generate_content(
-                model='gemini-3.8-flash',
-                contents=prompt,
-                config=genai.types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=SectionSummary,
-                    temperature=0.3,
-                ),
-            )
-            return SectionSummary.model_validate_json(response.text)
-            
-        except Exception as e:
-            if attempt < max_retries:
-                print(f"[AI Service] Gagal (Error 503/JSON rusak). Mencoba lagi dalam 3 detik... (Percobaan ke-{attempt+2})")
-                time.sleep(3)  # Jeda 3 detik sebelum mencoba lagi
-            else:
-                raise Exception(f"Gagal memanggil Gemini API setelah {max_retries} kali retry: {e}")
+Kamu adalah asisten dosen yang ahli dalam meringkas materi kuliah.
+Analisis teks materi berikut dan buat ringkasan terstruktur dalam Bahasa Indonesia.
+
+Materi:
+{text_chunk}
+"""
+    return _retry(prompt, SectionSummary, 0.3, max_retries)
+
 
 def generate_overview(sections: list[SectionSummary], max_retries: int = 2) -> str:
-    """
-    Membaca semua ringkasan per bagian, lalu meminta AI membuat 1 paragraf overview singkat.
-    """
-    api_key = os.getenv("GEMINI_API_KEY")
-    client = genai.Client(api_key=api_key)
-    
-    combined_text = ""
-    for idx, sec in enumerate(sections):
-        combined_text += f"\nBagian {idx+1}: {sec.title}\n"
-        combined_text += "Poin: " + ", ".join(sec.key_points) + "\n"
-        
+    combined_text = "".join(
+        f"\nBagian {idx + 1}: {section.title}\nPoin: {', '.join(section.key_points)}\n"
+        for idx, section in enumerate(sections)
+    )
     prompt = f"""
-    Kamu adalah dosen yang membuat ringkasan singkat.
-    Berdasarkan poin-poin materi kuliah di bawah ini, buatlah SATU paragraf ringkasan keseluruhan (overview) 
-    yang menjelaskan apa inti dari materi ini (maksimal 3-4 kalimat).
-    
-    Materi:
-    {combined_text}
-    """
-    
-    for attempt in range(max_retries + 1):
-        try:
-            response = client.models.generate_content(
-                model='gemini-3.8-flash',
-                contents=prompt,
-                config=genai.types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=OverviewResponse,
-                    temperature=0.4,
-                ),
-            )
-            overview_obj = OverviewResponse.model_validate_json(response.text)
-            return overview_obj.overview
-        except Exception as e:
-            if attempt < max_retries:
-                print(f"[AI Service] Gagal membuat overview. Mencoba lagi dalam 3 detik... (Percobaan ke-{attempt+2})")
-                time.sleep(3)
-            else:
-                raise Exception(f"Gagal membuat overview setelah {max_retries} kali retry: {e}")
+Kamu adalah dosen. Buat satu paragraf overview Bahasa Indonesia, maksimal 3-4 kalimat,
+berdasarkan materi berikut:
+{combined_text}
+"""
+    return _retry(prompt, OverviewResponse, 0.4, max_retries).overview
+
 
 def generate_flashcards(summary_text: str, max_retries: int = 2) -> list[dict]:
-    """
-    Meminta Gemini membuat kumpulan flashcard berdasarkan teks ringkasan materi.
-    """
-    api_key = os.getenv("GEMINI_API_KEY")
-    client = genai.Client(api_key=api_key)
-    
     prompt = f"""
-    Kamu adalah AI Tutor. Buatlah maksimal 10 flashcard (kartu belajar) berdasarkan materi berikut.
-    Sisi depan (front) berisi pertanyaan singkat atau istilah.
-    Sisi belakang (back) berisi jawaban atau definisi singkat.
-    
-    Materi:
-    {summary_text}
-    """
-    
-    for attempt in range(max_retries + 1):
-        try:
-            response = client.models.generate_content(
-                model='gemini-3.8-flash',
-                contents=prompt,
-                config=genai.types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=FlashcardList,
-                    temperature=0.4,
-                ),
-            )
-            flashcards_obj = FlashcardList.model_validate_json(response.text)
-            # Ubah object Pydantic menjadi list of dictionary agar mudah masuk ke Supabase
-            return [card.model_dump() for card in flashcards_obj.flashcards]
-            
-        except Exception as e:
-            if attempt < max_retries:
-                print(f"[AI Service] Gagal membuat flashcard. Mencoba lagi... (Percobaan ke-{attempt+2})")
-                time.sleep(3)
-            else:
-                raise Exception(f"Gagal membuat flashcard setelah {max_retries} kali retry: {e}")
+Kamu adalah AI Tutor. Buat maksimal 10 flashcard Bahasa Indonesia dari materi berikut.
+Sisi depan berisi pertanyaan atau istilah, sisi belakang berisi jawaban atau definisi.
+
+Materi:
+{summary_text}
+"""
+    result = _retry(prompt, FlashcardList, 0.4, max_retries)
+    return [card.model_dump() for card in result.flashcards]
+
 
 def generate_quiz_questions(summary_text: str, amount: int, difficulty: str, max_retries: int = 2) -> list[dict]:
-    """
-    Meminta Gemini membuat soal pilihan ganda (4 opsi).
-    """
-    api_key = os.getenv("GEMINI_API_KEY")
-    client = genai.Client(api_key=api_key)
-    
     prompt = f"""
-    Kamu adalah dosen penguji. Buatlah {amount} soal pilihan ganda tingkat kesulitan "{difficulty}" berdasarkan materi berikut.
-    Setiap soal harus memiliki tepat 4 opsi jawaban.
-    Berikan juga index jawaban yang benar (0 untuk opsi pertama, 1 untuk kedua, dst) dan penjelasan singkat.
-    
-    Materi:
-    {summary_text}
-    """
-    
-    for attempt in range(max_retries + 1):
-        try:
-            response = client.models.generate_content(
-                model='gemini-3.8-flash',
-                contents=prompt,
-                config=genai.types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=QuizData,
-                    temperature=0.4,
-                ),
-            )
-            quiz_obj = QuizData.model_validate_json(response.text)
-            return [q.model_dump() for q in quiz_obj.questions]
-            
-        except Exception as e:
-            if attempt < max_retries:
-                print(f"[AI Service] Gagal membuat quiz. Mencoba lagi... (Percobaan ke-{attempt+2})")
-                time.sleep(3)
-            else:
-                raise Exception(f"Gagal membuat quiz: {e}")
+Kamu adalah dosen penguji. Buat {amount} soal pilihan ganda Bahasa Indonesia tingkat kesulitan
+{difficulty} berdasarkan materi berikut. Setiap soal harus punya tepat 4 opsi, index jawaban benar,
+dan penjelasan.
 
-def get_chat_stream(context_text: str, chat_history: list[dict], new_message: str):
-    """
-    Fungsi ini memanggil Gemini menggunakan mode 'stream' (mengembalikan data sepotong-sepotong).
-    Menerima konteks materi dan riwayat chat sebelumnya agar AI tidak 'lupa' obrolan.
-    """
-    api_key = os.getenv("GEMINI_API_KEY")
-    client = genai.Client(api_key=api_key)
-    
-    # Format riwayat chat untuk Gemini (role 'user' dan 'model')
-    contents = []
-    for msg in chat_history:
-        role = "model" if msg["role"] == "assistant" else "user"
-        contents.append({"role": role, "parts": [{"text": msg["content"]}]})
-        
-    # Tambahkan pesan baru dari user
-    contents.append({"role": "user", "parts": [{"text": new_message}]})
+Materi:
+{summary_text}
+"""
+    result = _retry(prompt, QuizData, 0.4, max_retries)
+    return [question.model_dump() for question in result.questions]
 
-    # Instruksi sistem (System Prompt) yang dibekali dengan konteks materi
-    system_instruction = f"""
-    Kamu adalah AI Tutor yang ramah dan suportif untuk mahasiswa.
-    Gunakan gaya bahasa santai tapi sopan (Bahasa Indonesia).
-    Jawablah pertanyaan berdasarkan materi kuliah berikut ini. Jika pertanyaan di luar konteks materi, 
-    arahkan kembali ke materi secara sopan.
-    
-    Konteks Materi:
-    {context_text}
-    """
-    
-    # Mengembalikan generator stream dari Gemini
-    response = client.models.generate_content_stream(
-        model='gemini-3.8-flash',
-        contents=contents,
-        config=genai.types.GenerateContentConfig(
-            system_instruction=system_instruction,
-            temperature=0.5, # Sedikit lebih kreatif untuk chat, tapi tetap fokus
-        )
-    )
-    
-    return response
+
+def get_chat_stream(context_text: str, chat_history: list[dict], new_message: str) -> Iterator:
+    messages = [{
+        "role": "system",
+        "content": f"Kamu AI Tutor ramah. Jawab Bahasa Indonesia berdasarkan konteks materi.\n\nKonteks:\n{context_text}",
+    }]
+    messages.extend({"role": "assistant" if item["role"] == "assistant" else "user", "content": item["content"]} for item in chat_history)
+    messages.append({"role": "user", "content": new_message})
+    stream = _client().chat.completions.create(model=MODEL, messages=messages, temperature=0.5, stream=True)
+    for chunk in stream:
+        text = chunk.choices[0].delta.content
+        if text:
+            yield text

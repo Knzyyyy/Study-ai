@@ -5,10 +5,21 @@ from app.auth import get_current_user
 from app.services.supabase_client import supabase
 from app.services.extractor import extract_text_from_pdf, extract_text_from_pptx
 from app.services.summarizer import process_material_text
+from app.services.ai_service import MODEL, generate_flashcards, generate_quiz_questions
+from pydantic import BaseModel, ConfigDict, StrictBool
+
+
+class ProcessMaterialRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generate_summary: StrictBool = True
+    generate_flashcards: StrictBool = False
+    generate_quiz: StrictBool = False
 
 router = APIRouter(prefix="/materials", tags=["Materials"])
 
-def process_material_background(material_id: str, user_id: str):
+def process_material_background(material_id: str, user_id: str, options: ProcessMaterialRequest | None = None):
+    options = options or ProcessMaterialRequest()
     """
     Fungsi ini berjalan di background (tidak memblokir respon API).
     Tugasnya: Download file -> Ekstrak -> Ringkas -> Simpan ke DB.
@@ -24,8 +35,8 @@ def process_material_background(material_id: str, user_id: str):
         file_path_in_storage = material["file_path"]
         file_type = material["file_type"]
 
-        # Ubah status jadi 'processing'
-        supabase.table("materials").update({"status": "processing"}).eq("id", material_id).execute()
+        if material["status"] != "processing":
+            return
 
         # 2. Download file dari Supabase Storage (Bucket harus bernama 'materials')
         file_data = supabase.storage.from_("materials").download(file_path_in_storage)
@@ -53,50 +64,81 @@ def process_material_background(material_id: str, user_id: str):
             "content_text": p["content_text"]
         } for p in pages]
         
-        if pages_data:
-            supabase.table("material_pages").insert(pages_data).execute()
+        existing_pages = supabase.table("material_pages").select("page_number").eq("material_id", material_id).execute().data
+        page_numbers = {page["page_number"] for page in existing_pages}
+        missing_pages = [page for page in pages_data if page["page_number"] not in page_numbers]
+        if missing_pages:
+            supabase.table("material_pages").insert(missing_pages).execute()
 
-        # 5. Jalankan AI Summarizer (Proses Map-Reduce)
-        print("Memulai proses ringkasan AI...")
-        summary_result = process_material_text(pages)
+        if options.generate_summary and not supabase.table("summaries").select("id").eq("material_id", material_id).execute().data:
+            summary_result = process_material_text(pages)
+            supabase.table("summaries").insert({
+                "material_id": material_id,
+                "overview": summary_result["overview"],
+                "sections": summary_result["sections"],
+                "key_terms": summary_result["key_terms"],
+                "model_used": MODEL,
+            }).execute()
 
-        # 6. Simpan hasil ringkasan ke tabel 'summaries'
-        supabase.table("summaries").insert({
-            "material_id": material_id,
-            "overview": summary_result["overview"],
-            "sections": summary_result["sections"], # jsonb format
-            "key_terms": summary_result["key_terms"], # jsonb format
-            "model_used": "gemini-3.8-flash"
-        }).execute()
+        source_text = "\n\n".join(p["content_text"] for p in pages)
+        if options.generate_flashcards and not supabase.table("flashcards").select("id").eq("material_id", material_id).execute().data:
+            cards = generate_flashcards(source_text)
+            if cards:
+                supabase.table("flashcards").insert([
+                    {**card, "material_id": material_id} for card in cards
+                ]).execute()
+
+        existing_quizzes = supabase.table("quizzes").select("id").eq("material_id", material_id).execute().data if options.generate_quiz else []
+        complete_quiz = any(supabase.table("quiz_questions").select("id").eq("quiz_id", quiz["id"]).execute().data for quiz in existing_quizzes)
+        if options.generate_quiz and not complete_quiz:
+            questions = generate_quiz_questions(source_text, 10, "medium")
+            if not questions:
+                raise ValueError("AI tidak menghasilkan soal kuis")
+            if existing_quizzes:
+                quiz_id = existing_quizzes[0]["id"]
+            else:
+                quiz = supabase.table("quizzes").insert({
+                    "material_id": material_id,
+                    "title": "Quiz Medium - 10 Soal",
+                }).execute()
+                quiz_id = quiz.data[0]["id"]
+            supabase.table("quiz_questions").insert([
+                {**question, "quiz_id": quiz_id} for question in questions
+            ]).execute()
 
         # 7. Update status materi menjadi 'done'
         supabase.table("materials").update({
             "status": "done",
             "page_count": len(pages),
             "error_message": None
-        }).eq("id", material_id).execute()
+        }).eq("id", material_id).eq("user_id", user_id).eq("status", "processing").execute()
         
-        print(f"✅ Selesai memproses materi: {material_id}")
+        print(f"Selesai memproses materi: {material_id}")
 
     except Exception as e:
         # Jika gagal di tengah jalan, update status jadi 'failed'
-        print(f"❌ Gagal memproses {material_id}: {str(e)}")
+        print(f"Gagal memproses {material_id}: {str(e)}")
         supabase.table("materials").update({
             "status": "failed",
             "error_message": str(e)
-        }).eq("id", material_id).execute()
+        }).eq("id", material_id).eq("user_id", user_id).eq("status", "processing").execute()
 
 
 # Endpoint untuk Flutter memicu proses (Harus pakai Token JWT)
 @router.post("/{material_id}/process")
-def trigger_process_material(material_id: str, background_tasks: BackgroundTasks, user = Depends(get_current_user)):
-    # FastAPI akan langsung mengembalikan respon, sementara fungsi background jalan terus
-    background_tasks.add_task(process_material_background, material_id, user.id)
-    
-    return {
-        "message": "Proses ekstraksi dan ringkasan sedang berjalan di background",
-        "material_id": material_id
-    }
+def trigger_process_material(material_id: str, background_tasks: BackgroundTasks, req: ProcessMaterialRequest | None = None, user = Depends(get_current_user)):
+    rows = supabase.table("materials").select("status").eq("id", material_id).eq("user_id", user.id).execute().data
+    if not rows:
+        raise HTTPException(status_code=404, detail="Materi tidak ditemukan")
+    status = rows[0]["status"]
+    if status in ("processing", "done"):
+        return {"material_id": material_id, "status": status}
+    if status not in ("uploaded", "failed"):
+        raise HTTPException(status_code=409, detail="Status materi tidak dapat diproses")
+    claimed = supabase.table("materials").update({"status": "processing", "error_message": None}).eq("id", material_id).eq("user_id", user.id).eq("status", status).execute().data
+    if claimed:
+        background_tasks.add_task(process_material_background, material_id, user.id, req or ProcessMaterialRequest())
+    return {"material_id": material_id, "status": "processing"}
 
 # Endpoint tambahan: Cek Status
 @router.get("/{material_id}/status")
@@ -140,15 +182,27 @@ def regenerate_summary(material_id: str, background_tasks: BackgroundTasks, user
     if not mat_res.data:
         raise HTTPException(status_code=404, detail="Materi tidak ditemukan")
         
-    # 2. Hapus ringkasan yang lama (jika ada)
-    supabase.table("summaries").delete().eq("material_id", material_id).execute()
-    
-    # 3. Kembalikan status materi menjadi 'processing'
-    supabase.table("materials").update({"status": "processing"}).eq("id", material_id).execute()
-    
-    # 4. Panggil ulang background task
-    # (Perhatikan: di aplikasi sungguhan, kita bisa bikin fungsi khusus agar tidak ekstrak PDF lagi, 
-    # tapi untuk MVP, kita panggil fungsi yang sama agar kodenya sederhana dan bersih).
-    background_tasks.add_task(process_material_background, material_id, user.id)
-    
-    return {"message": "Permintaan generate ulang diterima. Proses sedang berjalan di background."}
+    status = mat_res.data[0]["status"]
+    if status == "processing":
+        return {"status": status}
+    claimed = supabase.table("materials").update({"status": "processing", "error_message": None}).eq("id", material_id).eq("user_id", user.id).eq("status", status).execute().data
+    if claimed:
+        background_tasks.add_task(regenerate_summary_background, material_id, user.id)
+    return {"status": "processing"}
+
+
+def regenerate_summary_background(material_id: str, user_id: str):
+    try:
+        pages = supabase.table("material_pages").select("page_number, content_text").eq("material_id", material_id).order("page_number").execute().data
+        if not pages:
+            raise ValueError("Teks materi belum tersedia")
+        result = process_material_text(pages)
+        payload = {"material_id": material_id, **result, "model_used": MODEL}
+        existing = supabase.table("summaries").select("id").eq("material_id", material_id).execute().data
+        if existing:
+            supabase.table("summaries").update(payload).eq("id", existing[0]["id"]).execute()
+        else:
+            supabase.table("summaries").insert(payload).execute()
+        supabase.table("materials").update({"status": "done", "error_message": None}).eq("id", material_id).eq("user_id", user_id).eq("status", "processing").execute()
+    except Exception as error:
+        supabase.table("materials").update({"status": "failed", "error_message": str(error)}).eq("id", material_id).eq("user_id", user_id).eq("status", "processing").execute()

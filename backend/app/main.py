@@ -6,6 +6,9 @@ from app.routers import materials
 from app.routers import materials, flashcards  # Tambahkan flashcards di sini
 from app.routers import materials, flashcards, quiz  # Tambahkan quiz di sini
 from app.routers import materials, flashcards, quiz, chat  # Tambahkan chat
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+# import router lain di sini...
 
 # Inisialisasi aplikasi FastAPI
 app = FastAPI(
@@ -17,8 +20,9 @@ app = FastAPI(
 # Konfigurasi CORS (Agar Flutter bisa memanggil API ini tanpa diblokir)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Untuk produksi MVP, "*" (semua) sudah cukup
-    allow_credentials=True,
+    allow_origins=[],
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

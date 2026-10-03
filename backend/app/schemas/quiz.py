@@ -1,24 +1,27 @@
-from pydantic import BaseModel
+from typing import Literal
+from pydantic import BaseModel, Field
 
-# Request dari Flutter saat mau bikin quiz
+
 class GenerateQuizRequest(BaseModel):
-    amount: int = 5          # Jumlah soal default 5
-    difficulty: str = "sedang" # Tingkat kesulitan (mudah/sedang/sulit)
+    amount: int = Field(default=10, ge=1, le=30, strict=True)
+    difficulty: Literal["mudah", "sedang", "sulit", "easy", "medium", "hard"] = "sedang"
 
-# Skema untuk memaksa Gemini membuat format yang benar
+
 class QuizQuestionItem(BaseModel):
-    question: str
-    options: list[str]     # Array berisi 4 pilihan jawaban
-    correct_index: int     # Index jawaban benar (0, 1, 2, atau 3)
-    explanation: str       # Penjelasan kenapa jawaban itu benar
+    question: str = Field(min_length=1)
+    options: list[str] = Field(min_length=4, max_length=4)
+    correct_index: int = Field(ge=0, le=3, strict=True)
+    explanation: str = Field(min_length=1)
+
 
 class QuizData(BaseModel):
     questions: list[QuizQuestionItem]
 
-# Request dari Flutter saat kumpul jawaban
+
 class AnswerItem(BaseModel):
-    question_id: str
-    selected_index: int
+    question_id: str = Field(min_length=1)
+    selected_index: int = Field(ge=0, strict=True)
+
 
 class SubmitQuizRequest(BaseModel):
-    answers: list[AnswerItem]
+    answers: list[AnswerItem] = Field(min_length=1)

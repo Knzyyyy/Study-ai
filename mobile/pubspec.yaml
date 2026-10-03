@@ -30,6 +30,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_riverpod: ^2.5.1       # State management
+  riverpod_annotation: ^2.3.5     # Anotasi Riverpod (opsional tapi rapi)
+  go_router: ^13.2.0              # Navigasi berbasis URL/route
+  dio: ^5.4.1                     # HTTP Client untuk panggil FastAPI
+  supabase_flutter: ^2.3.0        # Supabase Auth & Storage
+  flutter_secure_storage: ^9.0.0  # Simpan token aman
+  flutter_dotenv: ^5.1.0          # Baca .env di Flutter
+  file_picker: ^8.0.0             # Pilih file PDF/PPTX
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -38,6 +46,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  riverpod_generator: ^2.3.9
+  build_runner: ^2.4.8
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
