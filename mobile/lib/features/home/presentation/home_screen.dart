@@ -103,12 +103,25 @@ class HomeStatistics extends ConsumerWidget {
         () => ref.invalidate(flashcardReviewCountProvider),
       ),
       metric(
-        'Rata-rata skor kuis',
+        'Materi dilatih',
         Icons.track_changes_rounded,
+        quizzes.whenData((items) {
+          final practiced =
+              materials.valueOrNull
+                  ?.where((item) => (items[item.id]?.count ?? 0) > 0)
+                  .length ??
+              0;
+          return practiced == 0 ? '0' : '$practiced';
+        }),
+        () => ref.invalidate(quizProgressProvider),
+      ),
+      metric(
+        'Rata-rata skor kuis',
+        Icons.emoji_events_outlined,
         quizzes.whenData((items) {
           final score = weightedQuizScore(items.values);
           return score == null
-              ? 'Belum latihan'
+              ? 'Belum ada skor'
               : '${score.toStringAsFixed(1)}%';
         }),
         () => ref.invalidate(quizProgressProvider),
@@ -120,7 +133,7 @@ class HomeStatistics extends ConsumerWidget {
         runSpacing: 10,
         children: [
           for (final card in cards)
-            SizedBox(width: (constraints.maxWidth - 20) / 3, child: card),
+            SizedBox(width: (constraints.maxWidth - 10) / 2, child: card),
         ],
       ),
     );
@@ -199,6 +212,189 @@ class CourseProgressCard extends ConsumerWidget {
           },
         ),
   );
+}
+
+class _HomeProgressCard extends ConsumerWidget {
+  const _HomeProgressCard({required this.materials});
+
+  final List<MaterialModel>? materials;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    const primary = Color(0xFF7560B5);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE7E2F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Progres latihan',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          if (materials == null)
+            const LinearProgressIndicator(minHeight: 6)
+          else
+            ref
+                .watch(quizProgressProvider)
+                .when(
+                  data: (progress) {
+                    final items = materials!;
+                    if (items.isEmpty) {
+                      return const Text(
+                        'Belum latihan',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF716B80),
+                        ),
+                      );
+                    }
+                    final practiced = items
+                        .where((item) => (progress[item.id]?.count ?? 0) > 0)
+                        .length;
+                    final value = practiced / items.length;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$practiced/${items.length} materi dilatih',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF716B80),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: LinearProgressIndicator(
+                            value: value,
+                            minHeight: 6,
+                            backgroundColor: const Color(0xFFF2EDF9),
+                            color: primary,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                  loading: () => const LinearProgressIndicator(minHeight: 6),
+                  error: (_, _) => TextButton(
+                    onPressed: () => ref.invalidate(quizProgressProvider),
+                    child: const Text('Gagal memuat progres. Coba lagi'),
+                  ),
+                ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickActions extends StatelessWidget {
+  const _QuickActions({required this.material});
+
+  final MaterialModel? material;
+
+  @override
+  Widget build(BuildContext context) {
+    const primary = Color(0xFF7560B5);
+    final id = material?.id;
+    Widget action(String label, IconData icon, String suffix) => Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 3),
+        child: OutlinedButton.icon(
+          onPressed: id == null
+              ? null
+              : () => context.push('/materials/$id/$suffix'),
+          icon: Icon(icon, size: 18),
+          label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: primary,
+            backgroundColor: Colors.white,
+            side: const BorderSide(color: Color(0xFFE7E2F0)),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    return Row(
+      children: [
+        action('Ringkasan', Icons.article_outlined, 'summary'),
+        action('Flashcard', Icons.style_outlined, 'flashcards'),
+        action('Tanya Tutor', Icons.chat_bubble_outline_rounded, 'chat'),
+      ],
+    );
+  }
+}
+
+class _ContinueLearning extends StatelessWidget {
+  const _ContinueLearning({required this.materials});
+
+  final List<MaterialModel> materials;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Color(0xFF7560B5);
+    final material = latestHomeMaterials(materials).firstOrNull;
+    if (material == null) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE7E2F0)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF2EDF9),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.article_rounded, color: primary, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Pelajari materi terbaru',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  material.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF716B80),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Lanjut belajar',
+            onPressed: () => context.go('/materials/${material.id}/summary'),
+            icon: Icon(Icons.arrow_forward_rounded, color: primary),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 final selectedCourseProvider = StateProvider<String?>((ref) {
@@ -296,38 +492,27 @@ class HomeScreen extends ConsumerWidget {
         surfaceTintColor: Colors.white,
         elevation: 0,
         titleSpacing: 18,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            Text(
-              materialsOnly ? 'Materi' : 'Halo, $name',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: textPrimary,
-              ),
+            Icon(
+              Icons.auto_awesome_rounded,
+              color: Theme.of(context).colorScheme.primary,
+              size: 22,
             ),
-            SizedBox(height: 2),
-            Text(
-              'Siap belajar hal baru hari ini?',
-              style: TextStyle(fontSize: 13, color: textSecondary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                materialsOnly ? 'Materi' : 'AI Tutor',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            tooltip: 'Buka profil',
-            icon: CircleAvatar(
-              backgroundColor: const Color(0xFFEEF2FF),
-              foregroundColor: primary,
-              child: Text(name.characters.first.toUpperCase()),
-            ),
-            onPressed: () => context.go('/profile'),
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: TweenAnimationBuilder<double>(
         tween: Tween(begin: reducedMotion ? 1 : 0, end: 1),
@@ -346,151 +531,138 @@ class HomeScreen extends ConsumerWidget {
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.only(
-              top: materialsOnly ? 20 : 28,
-              bottom: materialsOnly ? 24 : 64,
+              top: materialsOnly ? 20 : 18,
+              bottom: materialsOnly ? 150 : 150,
             ),
             child: Column(
               children: [
+                if (!materialsOnly)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+                    child: Semantics(
+                      container: true,
+                      label: 'Salam untuk $name. Siap belajar apa hari?',
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFFE7E2F0)),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Halo, $name',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF30283F),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  const Text(
+                                    'Siap belajar apa hari?',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF716B80),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            ExcludeSemantics(
+                              child: Tooltip(
+                                message: 'Buka profil',
+                                child: GestureDetector(
+                                  onTap: () => context.go('/profile'),
+                                  child: Container(
+                                    width: 56,
+                                    height: 56,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEAE3F7),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: const Color(0xFFD8CCEC),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      name.characters.first.toUpperCase(),
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w800,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (!materialsOnly) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: primary,
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Icon(
-                                Icons.auto_stories_rounded,
-                                color: Colors.white,
-                                size: 32,
-                              ),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'Belajar lebih terarah',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Unggah materi, pahami ringkasan, lalu uji pemahamanmu.',
-                                style: TextStyle(
-                                  color: Color(0xFFE0E7FF),
-                                  height: 1.5,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              materialsAsync.when(
-                                data: (materials) => ref
-                                    .watch(quizProgressProvider)
-                                    .when(
-                                      data: (progress) {
-                                        final practiced = materials
-                                            .where(
-                                              (material) =>
-                                                  (progress[material.id]
-                                                          ?.count ??
-                                                      0) >
-                                                  0,
-                                            )
-                                            .length;
-                                        return Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              '$practiced/${materials.length} materi dilatih',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            LinearProgressIndicator(
-                                              value: materials.isEmpty
-                                                  ? 0
-                                                  : practiced /
-                                                        materials.length,
-                                              backgroundColor: const Color(
-                                                0xFF6366F1,
-                                              ),
-                                              color: Colors.white,
-                                              minHeight: 6,
-                                              borderRadius:
-                                                  BorderRadius.circular(6),
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                      loading: () => const Text(
-                                        'Memuat progres...',
-                                        style: TextStyle(color: Colors.white),
-                                      ),
-                                      error: (_, _) => TextButton(
-                                        style: TextButton.styleFrom(
-                                          foregroundColor: Colors.white,
-                                        ),
-                                        onPressed: () => ref.invalidate(
-                                          quizProgressProvider,
-                                        ),
-                                        child: const Text(
-                                          'Gagal memuat progres. Coba lagi',
-                                        ),
-                                      ),
-                                    ),
-                                loading: () => const SizedBox.shrink(),
-                                error: (_, _) => const SizedBox.shrink(),
-                              ),
-                              const SizedBox(height: 16),
-                              FilledButton.icon(
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: primary,
-                                  minimumSize: const Size(0, 48),
-                                ),
-                                onPressed: () => context.go(
-                                  '/materials/upload/${Uri.encodeComponent(ref.read(selectedCourseProvider) ?? 'course-123')}',
-                                ),
-                                icon: const Icon(Icons.upload_file_rounded),
-                                label: const Text('Upload materi'),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
                         const Text(
-                          'Statistik belajar',
+                          'Ringkasan belajar',
                           style: TextStyle(
                             fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                         const SizedBox(height: 12),
                         const HomeStatistics(),
+                        const SizedBox(height: 18),
+                        _HomeProgressCard(
+                          materials: materialsAsync.valueOrNull,
+                        ),
+                        const SizedBox(height: 18),
+                        _QuickActions(
+                          material: latestHomeMaterials(
+                            (materialsAsync.valueOrNull ??
+                                    const <MaterialModel>[])
+                                .where((item) => item.status == 'done')
+                                .toList(),
+                          ).firstOrNull,
+                        ),
+                        const SizedBox(height: 18),
+                        _ContinueLearning(
+                          materials: materialsAsync.valueOrNull ?? const [],
+                        ),
                         const SizedBox(height: 24),
                       ],
                       Text(
                         materialsOnly ? 'Semua materi' : 'Materi terbaru',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                      TextButton.icon(
-                        onPressed: () => showAddCourseDialog(context, ref),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Tambah Mata Kuliah'),
-                      ),
+                      const SizedBox(height: 8),
+                      if (materialsAsync.hasValue)
+                        Text(
+                          '${materialsAsync.valueOrNull!.length} materi di perpustakaan',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF716B80),
+                          ),
+                        ),
                       ref
                           .watch(coursesProvider)
                           .when(
@@ -505,12 +677,13 @@ class HomeScreen extends ConsumerWidget {
                               scrollDirection: Axis.horizontal,
                               child: Row(
                                 children: [
-                                  ChoiceChip(
-                                    label: const Text('Semua'),
+                                  _courseChip(
+                                    context,
+                                    label: 'Semua',
                                     selected:
                                         ref.watch(selectedCourseProvider) ==
                                         null,
-                                    onSelected: (_) =>
+                                    onTap: () =>
                                         ref
                                                 .read(
                                                   selectedCourseProvider
@@ -522,12 +695,13 @@ class HomeScreen extends ConsumerWidget {
                                   for (final course in courses)
                                     Padding(
                                       padding: const EdgeInsets.only(left: 8),
-                                      child: ChoiceChip(
-                                        label: Text(course.name),
+                                      child: _courseChip(
+                                        context,
+                                        label: course.name,
                                         selected:
                                             ref.watch(selectedCourseProvider) ==
                                             course.id,
-                                        onSelected: (_) =>
+                                        onTap: () =>
                                             ref
                                                     .read(
                                                       selectedCourseProvider
@@ -546,6 +720,22 @@ class HomeScreen extends ConsumerWidget {
                               ),
                             ),
                           ),
+                      const SizedBox(height: 10),
+                      TextButton.icon(
+                        onPressed: () => showAddCourseDialog(context, ref),
+                        icon: const Icon(Icons.add_circle_outline, size: 18),
+                        label: const Text('Tambah Mata Kuliah'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF7560B5),
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 36),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          textStyle: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                       if (ref.watch(selectedCourseProvider) != null &&
                           validCourseSelection(
                             ref.watch(selectedCourseProvider),
@@ -629,7 +819,7 @@ class HomeScreen extends ConsumerWidget {
                                   const SizedBox(width: 8),
                                   _buildStatusBadge(material.status),
                                   IconButton(
-                                    tooltip: 'Hapus materi',
+                                    tooltip: 'Hapus materi ${material.title}',
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(
                                       minWidth: 44,
@@ -653,9 +843,8 @@ class HomeScreen extends ConsumerWidget {
                                 ),
                               ),
                               const SizedBox(height: 18),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   _actionButton(
                                     context,
@@ -667,6 +856,7 @@ class HomeScreen extends ConsumerWidget {
                                     ),
                                     primary,
                                   ),
+                                  const SizedBox(height: 8),
                                   _actionButton(
                                     context,
                                     Icons.style_outlined,
@@ -677,6 +867,7 @@ class HomeScreen extends ConsumerWidget {
                                     ),
                                     primary,
                                   ),
+                                  const SizedBox(height: 8),
                                   _actionButton(
                                     context,
                                     Icons.quiz_outlined,
@@ -687,6 +878,7 @@ class HomeScreen extends ConsumerWidget {
                                     ),
                                     primary,
                                   ),
+                                  const SizedBox(height: 8),
                                   _actionButton(
                                     context,
                                     Icons.chat_bubble_outline_rounded,
@@ -722,8 +914,106 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFFE7E2F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Tambahkan materi baru',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'PDF atau PPTX • Maks. 20 MB',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF716B80),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: () => context.go(
+                              '/materials/upload/${Uri.encodeComponent(ref.read(selectedCourseProvider) ?? 'course-123')}',
+                            ),
+                            icon: const Icon(
+                              Icons.upload_file_rounded,
+                              size: 18,
+                            ),
+                            label: const Text('Tambah materi'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF7560B5),
+                              minimumSize: const Size.fromHeight(48),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _courseChip(
+    BuildContext context, {
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    const primary = Color(0xFF7560B5);
+    final color = selected ? Colors.white : const Color(0xFF30283F);
+    return Material(
+      color: selected ? primary : Colors.white,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 40),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: selected ? primary : const Color(0xFFE7E2F0),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (selected) ...[
+                Icon(Icons.check_rounded, size: 18, color: color),
+                const SizedBox(width: 6),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -806,42 +1096,33 @@ class HomeScreen extends ConsumerWidget {
     VoidCallback onTap,
     Color primary,
   ) {
-    return Material(
-      color: isActive ? Colors.white : const Color(0xFFF3F4F6),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: isActive ? onTap : null,
-        splashFactory: MediaQuery.disableAnimationsOf(context)
-            ? NoSplash.splashFactory
-            : InkRipple.splashFactory,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isActive ? const Color(0xFFE5E7EB) : Colors.transparent,
-            ),
+    return SizedBox(
+      height: 48,
+      child: OutlinedButton.icon(
+        onPressed: isActive ? onTap : null,
+        icon: Icon(
+          icon,
+          size: 18,
+          color: isActive ? primary : const Color(0xFF9CA3AF),
+        ),
+        label: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: isActive ? primary : const Color(0xFF9CA3AF),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: isActive ? primary : const Color(0xFF9CA3AF),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: isActive ? primary : const Color(0xFF9CA3AF),
-                ),
-              ),
-            ],
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: primary,
+          backgroundColor: isActive ? Colors.white : const Color(0xFFF3F4F6),
+          side: BorderSide(
+            color: isActive ? const Color(0xFFE5E7EB) : Colors.transparent,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),

@@ -26,7 +26,32 @@ class MyApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       routerConfig: router,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7560B5))
+            .copyWith(
+              primary: const Color(0xFF7560B5),
+              onPrimary: Colors.white,
+              primaryContainer: const Color(0xFFEAE3F7),
+              onPrimaryContainer: const Color(0xFF30283F),
+              secondary: const Color(0xFF7560B5),
+              onSecondary: Colors.white,
+              secondaryContainer: const Color(0xFFEAE3F7),
+              onSecondaryContainer: const Color(0xFF30283F),
+              surface: Colors.white,
+              onSurface: const Color(0xFF30283F),
+              onSurfaceVariant: const Color(0xFF716B80),
+              outline: const Color(0xFFE7E2F0),
+              outlineVariant: const Color(0xFFE7E2F0),
+            ),
+        scaffoldBackgroundColor: const Color(0xFFF7F5FC),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Color(0xFF30283F),
+          surfaceTintColor: Colors.white,
+        ),
+        progressIndicatorTheme: const ProgressIndicatorThemeData(
+          color: Color(0xFF9275CD),
+          linearTrackColor: Color(0xFFF2EDF9),
+        ),
         useMaterial3: true,
       ),
     );

@@ -22,7 +22,12 @@ class QuizScreen extends ConsumerWidget {
     // 1. Tampilan Saat Loading (Generate / Submit)
     if (quizState.isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Kuis AI')),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          elevation: 0,
+          title: const Text('Kuis AI'),
+        ),
         body: const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -106,7 +111,11 @@ class QuizScreen extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
-              const Icon(Icons.quiz_outlined, size: 80, color: Colors.blue),
+              const Icon(
+                Icons.quiz_outlined,
+                size: 80,
+                color: Color(0xFF7560B5),
+              ),
               const SizedBox(height: 16),
               const Text(
                 'Uji pemahamanmu dari materi ini!',
@@ -116,8 +125,8 @@ class QuizScreen extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Text(
-                    quizState.errorMessage!,
-                    style: const TextStyle(color: Colors.red),
+                    'Kuis belum siap. Coba lagi.',
+                    style: const TextStyle(color: Color(0xFFEF4444)),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -183,6 +192,7 @@ class QuizScreen extends ConsumerWidget {
           final selectedOption = quizState.selectedAnswers[q.id];
 
           return Card(
+            color: Colors.white,
             margin: const EdgeInsets.only(bottom: 24),
             elevation: 2,
             shape: RoundedRectangleBorder(
@@ -216,7 +226,7 @@ class QuizScreen extends ConsumerWidget {
                         }
                       },
                       contentPadding: EdgeInsets.zero,
-                      activeColor: Colors.blue,
+                      activeColor: const Color(0xFF7560B5),
                     );
                   }),
                 ],

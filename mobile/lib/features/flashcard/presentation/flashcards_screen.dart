@@ -43,8 +43,12 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
     final flashcardsAsync = ref.watch(flashcardsProvider(widget.materialId));
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF7F5FC),
       appBar: AppBar(
-        title: const Text('Flashcards Belajar'),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
+        title: const Text('Flashcard Belajar'),
         actions: [
           IconButton(
             icon: const Icon(Icons.auto_awesome),
@@ -66,9 +70,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                 });
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Flashcard berhasil dibuat! 🎉'),
-                    ),
+                    const SnackBar(content: Text('Flashcard berhasil dibuat.')),
                   );
                 }
               } catch (e) {
@@ -124,7 +126,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                 Text(
                   'Kartu ${currentIndex + 1} dari ${cards.length}',
                   style: const TextStyle(
-                    color: Colors.grey,
+                    color: Color(0xFF716B80),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -143,13 +145,13 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       color: showBack
-                          ? Colors.indigo.shade50
-                          : Colors.blue.shade50,
+                          ? const Color(0xFFEAE3F7)
+                          : const Color(0xFFF2EDF9),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: showBack
-                            ? Colors.indigo.shade200
-                            : Colors.blue.shade200,
+                            ? const Color(0xFF7560B5)
+                            : const Color(0xFFE7E2F0),
                         width: 2,
                       ),
                       boxShadow: [
@@ -172,7 +174,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: showBack ? Colors.indigo : Colors.blue,
+                                color: const Color(0xFF7560B5),
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -190,7 +192,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                 const SizedBox(height: 8),
                 const Text(
                   '(Ketuk kartu untuk membalik)',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                  style: TextStyle(fontSize: 12, color: Color(0xFF716B80)),
                 ),
                 const SizedBox(height: 16),
                 FilledButton.icon(

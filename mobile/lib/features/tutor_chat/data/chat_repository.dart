@@ -63,7 +63,9 @@ class ChatRepository {
       cancelToken: cancelToken,
       options: Options(responseType: ResponseType.stream),
     );
-    yield* decodeChatStream(response.data!.stream);
+    yield* decodeChatStream(
+      response.data!.stream.timeout(const Duration(seconds: 60)),
+    );
   }
 }
 

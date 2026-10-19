@@ -29,16 +29,20 @@ void main() {
         ),
       ),
     );
-    expect(find.byType(InkWell), findsNWidgets(5));
-    final upload = tester.widget<AnimatedContainer>(
-      find.byType(AnimatedContainer).at(2),
-    );
-    expect(upload.constraints?.maxHeight, 56);
+    expect(find.byType(InkWell), findsNWidgets(6));
+    expect(find.byType(AnimatedScale), findsNWidgets(5));
     expect(
       tester.getTopLeft(find.byIcon(Icons.add_rounded)).dy,
       lessThan(tester.getTopLeft(find.byIcon(Icons.home_rounded)).dy),
     );
-    for (final label in ['Beranda', 'Materi', 'Upload', 'Kuis', 'Profil']) {
+    expect(find.text('Upload'), findsOneWidget);
+    for (final label in [
+      'Beranda',
+      'Materi',
+      'Upload',
+      'Kuis',
+      'Profil',
+    ]) {
       await tester.tap(find.text(label));
       await tester.pump();
       expect(
@@ -46,12 +50,6 @@ void main() {
         ['Beranda', 'Materi', 'Upload', 'Kuis', 'Profil'].indexOf(label),
       );
     }
-    expect(
-      tester
-          .widget<AnimatedContainer>(find.byType(AnimatedContainer).first)
-          .duration,
-      Duration.zero,
-    );
     expect(tester.takeException(), isNull);
   });
   test(

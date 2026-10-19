@@ -114,12 +114,12 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
     final selectedCourse = validCourseSelection(candidate, courses)
         ? candidate
         : null;
-    const primary = Color(0xFF4F46E5);
-    const heading = Color(0xFF111827);
-    const secondary = Color(0xFF64748B);
+    const primary = Color(0xFF7560B5);
+    const heading = Color(0xFF30283F);
+    const secondary = Color(0xFF716B80);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFF),
+      backgroundColor: const Color(0xFFF7F5FC),
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
@@ -131,7 +131,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFEEF2FF),
+                color: const Color(0xFFF2EDF9),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(
@@ -165,7 +165,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
             margin: const EdgeInsets.only(right: 16),
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: const Color(0xFFE7E2F0)),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -177,7 +177,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
+        padding: const EdgeInsets.fromLTRB(20, 22, 20, 150),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -191,7 +191,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
             ),
             const SizedBox(height: 6),
             const Text(
-              'Unggah slide atau dokumen untuk ringkasan instan dan kuis AI.',
+              'Unggah slide atau dokumen untuk diproses oleh AI.',
               style: TextStyle(fontSize: 14, height: 1.45, color: secondary),
             ),
             const SizedBox(height: 18),
@@ -253,7 +253,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
                     null) ...[
               Text(
                 ref.read(materialsControllerProvider.notifier).status == 'done'
-                    ? 'Analisis selesai'
+                    ? 'Pemrosesan selesai. Materi siap dipelajari.'
                     : ref.read(materialsControllerProvider.notifier).message ??
                           'Materi belum selesai diproses',
               ),
@@ -312,7 +312,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
                     : _analyzeFile,
                 icon: const Icon(Icons.auto_awesome_rounded, size: 19),
                 label: Text(
-                  state.isLoading ? 'Memproses materi...' : 'Mulai Analisis',
+                  state.isLoading ? 'Memproses materi...' : 'Mulai Pemrosesan',
                 ),
                 style: FilledButton.styleFrom(
                   backgroundColor: primary,
@@ -338,7 +338,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(
-          color: const Color(0xFFBFDBFE),
+          color: const Color(0xFFE7E2F0),
           style: BorderStyle.solid,
         ),
         borderRadius: BorderRadius.circular(14),
@@ -348,7 +348,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFEEF2FF),
+              color: const Color(0xFFF2EDF9),
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.cloud_upload_outlined, color: primary, size: 24),
@@ -359,7 +359,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1E293B),
+              color: Color(0xFF30283F),
             ),
           ),
           const SizedBox(height: 4),
@@ -371,7 +371,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
             style: TextStyle(
               fontSize: 12,
               height: 1.4,
-              color: Color(0xFF64748B),
+              color: Color(0xFF716B80),
             ),
           ),
           const SizedBox(height: 12),
@@ -384,7 +384,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
             style: OutlinedButton.styleFrom(
               foregroundColor: primary,
               minimumSize: const Size(130, 40),
-              side: const BorderSide(color: Color(0xFFE2E8F0)),
+              side: const BorderSide(color: Color(0xFFE7E2F0)),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -400,11 +400,11 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: const Color(0xFFE2E8F0)),
+      border: Border.all(color: const Color(0xFFE7E2F0)),
     ),
     child: const Row(
       children: [
-        CircularProgressIndicator(strokeWidth: 3, color: Color(0xFF4F46E5)),
+        CircularProgressIndicator(strokeWidth: 3, color: Color(0xFF9275CD)),
         SizedBox(width: 12),
         Expanded(
           child: Text(
@@ -412,7 +412,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF334155),
+              color: Color(0xFF30283F),
             ),
           ),
         ),
@@ -425,7 +425,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const Color(0xFFE2E8F0)),
+      border: Border.all(color: const Color(0xFFE7E2F0)),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -435,7 +435,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF1E293B),
+            color: Color(0xFF30283F),
           ),
         ),
         const SizedBox(height: 8),
@@ -475,7 +475,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
     padding: const EdgeInsets.symmetric(horizontal: 10),
     height: 44,
     decoration: BoxDecoration(
-      color: const Color(0xFFF8FAFC),
+      color: const Color(0xFFF2EDF9),
       borderRadius: BorderRadius.circular(8),
     ),
     child: Row(
@@ -485,7 +485,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF334155)),
+            style: const TextStyle(fontSize: 12, color: Color(0xFF30283F)),
           ),
         ),
         Switch(

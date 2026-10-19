@@ -1,9 +1,87 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tugas_akhir_mobpro/features/quiz/presentation/quiz_controller.dart';
 import 'package:tugas_akhir_mobpro/features/materials/presentation/courses.dart';
 import 'package:tugas_akhir_mobpro/features/materials/domain/material_model.dart';
 import 'package:tugas_akhir_mobpro/features/home/presentation/home_screen.dart';
 
 void main() {
+  testWidgets('Materi counts and course filter fit narrow width', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final materials = [
+      for (final id in ['one', 'two'])
+        MaterialModel.fromJson({
+          'id': id,
+          'course_id': id == 'one' ? 'course-a' : 'course-b',
+          'user_id': 'user',
+          'title': 'Materi $id',
+          'file_path': id,
+          'file_type': 'pdf',
+          'status': 'done',
+          'created_at': '2026-01-01T00:00:00Z',
+        }),
+    ];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          homeUserProvider.overrideWith((ref) => Stream.value(null)),
+          courseUserProvider.overrideWith((ref) => Stream.value('user')),
+          coursesProvider.overrideWith(
+            (ref) async => const [
+              Course(id: 'course-a', name: 'Matematika'),
+              Course(id: 'course-b', name: 'Fisika'),
+            ],
+          ),
+          materialsListProvider.overrideWith((ref) async => materials),
+          quizProgressProvider.overrideWith((ref) async => {}),
+        ],
+        child: const MaterialApp(home: MaterialsLibraryScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Materi\nKuliah'), findsOneWidget);
+    expect(find.byType(AppBar), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'Mata Kuliah'), findsOneWidget);
+    expect(
+      tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+      const Color(0xFFF8FAFF),
+    );
+    final card = tester.widget<Container>(
+      find
+          .ancestor(
+            of: find.text('Materi one'),
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+    expect((card.decoration! as BoxDecoration).color, Colors.white);
+    expect(
+      (card.decoration! as BoxDecoration).borderRadius,
+      BorderRadius.circular(28),
+    );
+    expect(find.text('2 mata kuliah'), findsOneWidget);
+    expect(find.text('2 materi'), findsOneWidget);
+    expect(find.text('Materi one'), findsOneWidget);
+    expect(find.text('Materi two'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Matematika'));
+    await tester.pumpAndSettle();
+    expect(find.text('Materi one'), findsOneWidget);
+    expect(find.text('Materi two'), findsNothing);
+    expect(find.byType(CourseProgressCard), findsOneWidget);
+    expect(find.text('2 materi'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Semua'));
+    await tester.pumpAndSettle();
+    expect(find.text('Materi two'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   test('Nama dan pilihan harus valid, placeholder ditolak', () {
     const courses = [Course(id: 'real-id', name: 'Matematika')];
     expect(validateCourseName('   '), isNotNull);

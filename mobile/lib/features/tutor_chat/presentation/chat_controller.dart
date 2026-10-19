@@ -10,6 +10,7 @@ class ChatState {
   final bool isLoading;
   final bool isTyping;
   final String? error;
+  final bool historyError;
 
   ChatState({
     this.sessionId,
@@ -18,6 +19,7 @@ class ChatState {
     this.isLoading = false,
     this.isTyping = false,
     this.error,
+    this.historyError = false,
   });
 
   ChatState copyWith({
@@ -27,13 +29,16 @@ class ChatState {
     bool? isLoading,
     bool? isTyping,
     String? error,
+    bool clearError = false,
+    bool? historyError,
   }) => ChatState(
     sessionId: sessionId ?? this.sessionId,
     sessions: sessions ?? this.sessions,
     messages: messages ?? this.messages,
     isLoading: isLoading ?? this.isLoading,
     isTyping: isTyping ?? this.isTyping,
-    error: error,
+    error: clearError ? null : error ?? this.error,
+    historyError: historyError ?? this.historyError,
   );
 }
 
@@ -45,28 +50,23 @@ class ChatController extends StateNotifier<ChatState> {
 
   ChatController(this._repository) : super(ChatState());
 
-  Future<void> initSession(
-    String materialId, {
-    String? sessionId,
-    bool newSession = false,
-  }) async {
+  Future<void> initSession(String materialId) async {
+    if (_materialId == materialId && (state.isLoading || state.isTyping))
+      return;
     final generation = ++_generation;
     _cancelToken?.cancel();
     if (_materialId != materialId) state = ChatState();
     _materialId = materialId;
     state = state.copyWith(isLoading: true, isTyping: false);
     try {
-      var sessions = await _repository.getSessions(materialId);
+      final sessions = await _repository.getSessions(materialId);
       if (!mounted || generation != _generation) return;
-      final selected = newSession
+      final selected = sessions.isEmpty
           ? await _repository.createSession(materialId)
-          : sessionId ??
-                state.sessionId ??
-                (sessions.isEmpty ? null : sessions.first.id);
-      final history = selected == null
-          ? <ChatMessage>[]
-          : await _repository.getHistory(selected);
-      if (newSession) sessions = await _repository.getSessions(materialId);
+          : sessions.first.id;
+      if (!mounted || generation != _generation) return;
+      state = state.copyWith(sessionId: selected);
+      final history = await _repository.getHistory(selected);
       if (!mounted || generation != _generation) return;
       state = ChatState(
         sessionId: selected,
@@ -77,17 +77,21 @@ class ChatController extends StateNotifier<ChatState> {
       if (mounted && generation == _generation) {
         state = state.copyWith(
           isLoading: false,
-          error: 'Gagal memuat chat: $e',
+          error: 'Riwayat chat gagal dimuat. Periksa koneksi lalu coba lagi.',
+          historyError: true,
         );
       }
     }
+  }
+
+  void clearError() {
+    if (state.error != null) state = state.copyWith(clearError: true);
   }
 
   Future<void> sendMessage(String text) async {
     if (state.sessionId == null ||
         state.isLoading ||
         state.isTyping ||
-        state.error != null ||
         text.trim().isEmpty) {
       return;
     }
@@ -102,6 +106,8 @@ class ChatController extends StateNotifier<ChatState> {
         ChatMessage(role: 'assistant', content: ''),
       ],
       isTyping: true,
+      clearError: true,
+      historyError: false,
     );
     try {
       await for (final chunk in _repository.sendMessageStream(
@@ -116,9 +122,35 @@ class ChatController extends StateNotifier<ChatState> {
         );
         state = state.copyWith(messages: messages);
       }
+      if (mounted && generation == _generation) {
+        try {
+          final history = await _repository.getHistory(sessionId);
+          if (!mounted || generation != _generation) return;
+          state = state.copyWith(
+            messages: history,
+            error: null,
+            historyError: false,
+          );
+        } catch (e) {
+          state = state.copyWith(
+            error: 'Riwayat chat gagal dimuat. Respons sudah diterima.',
+            historyError: true,
+          );
+        }
+      }
     } catch (e) {
       if (mounted && generation == _generation) {
-        state = state.copyWith(error: 'Gagal menerima respons: $e');
+        final messages = List<ChatMessage>.from(state.messages);
+        if (messages.isNotEmpty &&
+            messages.last.role == 'assistant' &&
+            messages.last.content.isEmpty) {
+          messages.removeLast();
+        }
+        state = state.copyWith(
+          messages: messages,
+          error: 'Respons gagal diterima. Coba kirim ulang.',
+          historyError: false,
+        );
       }
     } finally {
       if (mounted && generation == _generation) {

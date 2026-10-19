@@ -40,22 +40,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleGoogleLogin() async {
-    await ref.read(authControllerProvider.notifier).signInWithGoogle();
+    final success = await ref
+        .read(authControllerProvider.notifier)
+        .signInWithGoogle();
+    if (!mounted || success) return;
+    final error = ref.read(authControllerProvider).error;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(error?.toString() ?? 'Login Google gagal')),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
-    const primary = Color(0xFF4F46E5);
-    const heading = Color(0xFF111827);
-    const secondary = Color(0xFF64748B);
+    const primary = Color(0xFF7560B5);
+    const heading = Color(0xFF30283F);
+    const secondary = Color(0xFF716B80);
     final inputBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: Color(0xFFDDE5F0)),
+      borderSide: const BorderSide(color: Color(0xFFE7E2F0)),
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFF),
+      backgroundColor: const Color(0xFFF7F5FC),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -66,7 +73,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: const Color(0xFFE7E2F0)),
                 boxShadow: const [
                   BoxShadow(
                     color: Color(0x10000000),
@@ -80,7 +87,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEEF2FF),
+                      color: const Color(0xFFF2EDF9),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: const Icon(
@@ -107,9 +114,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFBFDFF),
+                      color: const Color(0xFFF2EDF9),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFE5EAF2)),
+                      border: Border.all(color: const Color(0xFFE7E2F0)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -260,7 +267,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               style: TextStyle(color: heading),
                             ),
                             style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Color(0xFFE2E8F0)),
+                              side: const BorderSide(color: Color(0xFFE7E2F0)),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -289,7 +296,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 12),
                   const Text(
                     'Kebijakan Privasi   •   Panduan Etika Akademik',
-                    style: TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
+                    style: TextStyle(fontSize: 10, color: Color(0xFF716B80)),
                   ),
                 ],
               ),

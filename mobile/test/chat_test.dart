@@ -31,25 +31,23 @@ class SavedChatRepository extends ChatRepository {
 }
 
 void main() {
-  testWidgets(
-    'opening resumes saved history; Chat Baru alone creates session',
-    (tester) async {
-      final repository = SavedChatRepository();
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [chatRepositoryProvider.overrideWithValue(repository)],
-          child: const MaterialApp(home: ChatScreen(materialId: 'material')),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Saved answer'), findsOneWidget);
-      expect(repository.created, 0);
-      await tester.tap(find.text('Chat Baru'));
-      await tester.pumpAndSettle();
-      expect(repository.created, 1);
-      expect(find.text('Saved answer'), findsNothing);
-    },
-  );
+  testWidgets('opening resumes saved history without new chat controls', (
+    tester,
+  ) async {
+    final repository = SavedChatRepository();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [chatRepositoryProvider.overrideWithValue(repository)],
+        child: const MaterialApp(home: ChatScreen(materialId: 'material')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Saved answer'), findsOneWidget);
+    expect(repository.created, 0);
+    expect(repository.created, 0);
+    expect(find.text('Chat Baru'), findsNothing);
+    expect(find.byType(DropdownButton<String>), findsNothing);
+  });
   test('UTF8 and SSE survive every byte boundary and multiline data', () async {
     final bytes = utf8.encode(
       ': keepalive\r\ndata: {"text":\r\ndata: "你好 🌍"}\r\n\r\ndata: [DONE]\r\n\r\n',

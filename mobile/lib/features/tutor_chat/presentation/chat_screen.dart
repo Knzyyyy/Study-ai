@@ -1,6 +1,72 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../home/presentation/home_screen.dart' show materialsListProvider;
 import 'chat_controller.dart';
+
+class _TypingIndicator extends StatefulWidget {
+  const _TypingIndicator();
+
+  @override
+  State<_TypingIndicator> createState() => _TypingIndicatorState();
+}
+
+class _TypingIndicatorState extends State<_TypingIndicator>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (reduceMotion) {
+      return const Text('...', style: TextStyle(fontSize: 15, height: 1.4));
+    }
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (index) {
+            final phase = (_controller.value + index / 3) % 1;
+            final scale = 0.75 + 0.25 * (1 - (phase - 0.5).abs() * 2);
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Transform.scale(
+                scale: scale,
+                child: Opacity(opacity: scale, child: child),
+              ),
+            );
+          }),
+        );
+      },
+      child: const SizedBox(
+        width: 6,
+        height: 6,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.black54,
+            shape: BoxShape.circle,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String materialId;
@@ -29,6 +95,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   @override
+  void didUpdateWidget(covariant ChatScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.materialId != widget.materialId) {
+      _textController.clear();
+      Future.microtask(() {
+        if (mounted) {
+          ref
+              .read(chatControllerProvider.notifier)
+              .initSession(widget.materialId);
+        }
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _textController.dispose();
     _scrollController.dispose();
@@ -49,74 +130,52 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget build(BuildContext context) {
     final chatState = ref.watch(chatControllerProvider);
     final controller = ref.read(chatControllerProvider.notifier);
+    final materials = ref.watch(materialsListProvider).valueOrNull ?? [];
+    String? materialTitle;
+    for (final material in materials) {
+      if (material.id == widget.materialId) {
+        materialTitle = material.title;
+        break;
+      }
+    }
 
     // Otomatis scroll ke bawah tiap ada pesan/ketikan baru
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Tutor'),
-        actions: [
-          TextButton(
-            onPressed: chatState.isLoading || chatState.isTyping
-                ? null
-                : () => controller.initSession(
-                    widget.materialId,
-                    newSession: true,
-                  ),
-            child: const Text(
-              'Chat Baru',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-        backgroundColor: Colors.blue.shade900,
+        title: Text(
+          materialTitle == null ? 'AI Tutor' : 'AI Tutor · $materialTitle',
+          overflow: TextOverflow.ellipsis,
+        ),
+        backgroundColor: const Color(0xFF7560B5),
         foregroundColor: Colors.white,
       ),
       body: chatState.isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                if (chatState.sessions.isNotEmpty)
-                  DropdownButton<String>(
-                    isExpanded: true,
-                    value: chatState.sessionId,
-                    hint: const Text('Pilih riwayat'),
-                    items: chatState.sessions
-                        .map(
-                          (session) => DropdownMenuItem(
-                            value: session.id,
-                            child: Text(
-                              '${session.title}${session.date == null ? '' : ' · ${session.date!.toLocal()}'}',
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: chatState.isTyping
-                        ? null
-                        : (id) {
-                            if (id != null) {
-                              controller.initSession(
-                                widget.materialId,
-                                sessionId: id,
-                              );
-                            }
-                          },
-                  ),
                 if (chatState.error != null)
                   Column(
                     children: [
-                      Text(chatState.error!),
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: SelectableText(chatState.error!),
+                      ),
                       TextButton(
-                        onPressed: () =>
-                            controller.initSession(widget.materialId),
-                        child: const Text('Muat ulang riwayat'),
+                        onPressed: () => chatState.historyError
+                            ? controller.initSession(widget.materialId)
+                            : controller.clearError(),
+                        child: Text(
+                          chatState.historyError
+                              ? 'Coba muat riwayat lagi'
+                              : 'Tutup pesan gagal',
+                        ),
                       ),
                     ],
                   ),
                 if (chatState.sessionId == null && chatState.error == null)
-                  const Text('Belum ada riwayat. Pilih Chat Baru.'),
+                  const Text('Belum ada riwayat untuk materi ini.'),
                 // 1. Area Balon Chat
                 Expanded(
                   child: ListView.builder(
@@ -142,8 +201,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           ),
                           decoration: BoxDecoration(
                             color: isUser
-                                ? Colors.blue.shade100
-                                : Colors.grey.shade200,
+                                ? const Color(0xFFEAE3F7)
+                                : const Color(0xFFFFFFFF),
                             borderRadius: BorderRadius.only(
                               topLeft: const Radius.circular(16),
                               topRight: const Radius.circular(16),
@@ -151,10 +210,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               bottomRight: Radius.circular(isUser ? 0 : 16),
                             ),
                           ),
-                          child: Text(
-                            msg.content.isEmpty ? "..." : msg.content,
-                            style: const TextStyle(fontSize: 15, height: 1.4),
-                          ),
+                          child:
+                              msg.content.isEmpty &&
+                                  !isUser &&
+                                  chatState.isTyping
+                              ? const _TypingIndicator()
+                              : Text(
+                                  msg.content,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    height: 1.4,
+                                  ),
+                                ),
                         ),
                       );
                     },
@@ -198,7 +265,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       CircleAvatar(
                         backgroundColor: chatState.isTyping
                             ? Colors.grey
-                            : Colors.blue.shade900,
+                            : const Color(0xFF7560B5),
                         radius: 24,
                         child: IconButton(
                           icon: const Icon(Icons.send, color: Colors.white),

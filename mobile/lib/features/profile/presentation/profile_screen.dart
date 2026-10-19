@@ -97,17 +97,17 @@ class ProfileStatistics extends ConsumerWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: const Color(0xFFE7E2F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: const Color(0xFF4F46E5), size: 19),
+          Icon(icon, color: const Color(0xFF7560B5), size: 19),
           const SizedBox(height: 12),
           value,
           Text(
             label,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            style: const TextStyle(fontSize: 12, color: Color(0xFF716B80)),
           ),
         ],
       ),
@@ -237,7 +237,7 @@ class _ProfileEditFormState extends State<ProfileEditForm> {
                     : validateNim,
               ),
               if (error != null)
-                Text(error!, style: const TextStyle(color: Colors.red)),
+                Text(error!, style: const TextStyle(color: Color(0xFFEF4444))),
               if (saving) const LinearProgressIndicator(),
             ],
           ),
@@ -312,9 +312,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'Pengguna';
     final nim = _metadataText(user?.userMetadata?['nim']);
     final email = user?.email ?? 'Belum ada email';
-    const primary = Color(0xFF4F46E5);
+    const primary = Color(0xFF7560B5);
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFF),
+      backgroundColor: const Color(0xFFF7F5FC),
       appBar: AppBar(
         title: const Text(
           'Profil',
@@ -325,26 +325,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
         elevation: 0,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 110),
         children: [
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: const Color(0xFFE7E2F0)),
             ),
             child: Row(
               children: [
                 CircleAvatar(
                   radius: 32,
-                  backgroundColor: const Color(0xFFD1FAE5),
+                  backgroundColor: const Color(0xFFEAE3F7),
                   child: Text(
                     _initials(name),
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF047857),
+                      color: Color(0xFF7560B5),
                     ),
                   ),
                 ),
@@ -365,7 +365,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         nim == null ? 'NIM belum diisi' : 'NIM: $nim',
                         style: const TextStyle(
                           fontSize: 13,
-                          color: Color(0xFF64748B),
+                          color: Color(0xFF716B80),
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -375,7 +375,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF64748B),
+                          color: Color(0xFF716B80),
                         ),
                       ),
                     ],
@@ -489,9 +489,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _setting(IconData icon, String title, String subtitle) => ListTile(
     contentPadding: EdgeInsets.zero,
-    leading: Icon(icon, color: const Color(0xFF4F46E5)),
+    leading: Icon(icon, color: const Color(0xFF7560B5)),
     title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
     subtitle: Text(subtitle),
-    trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8)),
+    trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF716B80)),
   );
 }

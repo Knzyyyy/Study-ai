@@ -13,12 +13,19 @@ final quizCourseProvider = StateProvider<String?>((ref) {
 class QuizHubScreen extends ConsumerWidget {
   const QuizHubScreen({super.key});
 
+  String _statusLabel(String status) => switch (status) {
+    'uploaded' => 'Menunggu pemrosesan',
+    'processing' => 'Sedang diproses',
+    'failed' => 'Gagal diproses',
+    _ => 'Belum siap dikerjakan',
+  };
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final materials = ref.watch(materialsListProvider);
     final progress = ref.watch(quizProgressProvider);
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFF),
+      backgroundColor: const Color(0xFFF7F5FC),
       appBar: AppBar(
         title: const Text(
           'Kuis',
@@ -68,7 +75,7 @@ class QuizHubScreen extends ConsumerWidget {
           Expanded(
             child: materials.when(
               loading: () => const Center(
-                child: CircularProgressIndicator(color: Color(0xFF4F46E5)),
+                child: CircularProgressIndicator(color: Color(0xFF7560B5)),
               ),
               error: (error, _) =>
                   Center(child: Text('Gagal memuat materi: $error')),
@@ -80,7 +87,7 @@ class QuizHubScreen extends ConsumerWidget {
                         child: Text('Belum ada materi untuk dibuat kuis.'),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.all(18),
+                        padding: const EdgeInsets.fromLTRB(18, 18, 18, 150),
                         itemCount: items.length,
                         itemBuilder: (context, index) {
                           final material = items[index];
@@ -91,7 +98,7 @@ class QuizHubScreen extends ConsumerWidget {
                             color: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
-                              side: const BorderSide(color: Color(0xFFE2E8F0)),
+                              side: const BorderSide(color: Color(0xFFE7E2F0)),
                             ),
                             child: ListTile(
                               contentPadding: const EdgeInsets.symmetric(
@@ -99,11 +106,11 @@ class QuizHubScreen extends ConsumerWidget {
                                 vertical: 8,
                               ),
                               leading: CircleAvatar(
-                                backgroundColor: const Color(0xFFEEF2FF),
+                                backgroundColor: const Color(0xFFF2EDF9),
                                 child: Icon(
                                   Icons.quiz_outlined,
                                   color: enabled
-                                      ? const Color(0xFF4F46E5)
+                                      ? const Color(0xFF7560B5)
                                       : Colors.grey,
                                 ),
                               ),
@@ -116,7 +123,7 @@ class QuizHubScreen extends ConsumerWidget {
                                 ),
                               ),
                               subtitle: Text(
-                                '${enabled ? "Siap dikerjakan" : "Materi sedang diproses"}\n'
+                                '${enabled ? "Siap dikerjakan" : _statusLabel(material.status)}\n'
                                 '${progress.valueOrNull?[material.id]?.summary ?? (progress.hasError ? "Gagal memuat progres" : "Memuat progres...")}',
                               ),
                               trailing: const Icon(Icons.chevron_right_rounded),

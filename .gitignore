@@ -26,3 +26,12 @@ mobile/.flutter-plugins-dependencies
 # OS
 .DS_Store
 Thumbs.db
+
+# AI tooling / editor agent config
+.opencode/
+.agents/
+.claude/
+.cursor/
+skills-lock.json
+opencode.json
+.md
