@@ -1243,6 +1243,7 @@ class HomeScreen extends ConsumerWidget {
     const primary = AppColors.primaryDark;
     final search = materialsOnly ? ref.watch(_materialSearchProvider) : '';
     final status = materialsOnly ? ref.watch(_materialStatusProvider) : null;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -1302,12 +1303,13 @@ class HomeScreen extends ConsumerWidget {
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.only(top: materialsOnly ? 0 : 18, bottom: 110),
+            padding: EdgeInsets.only(
+              top: materialsOnly ? 0 : 18,
+              bottom: 148 + bottomInset,
+            ),
             child: Column(
               children: [
-                if (!materialsOnly) ...[
-                  const SizedBox.shrink(),
-                ] else ...[
+                if (materialsOnly) ...[
                   Container(
                     width: double.infinity,
                     color: AppColors.peach,
@@ -1452,12 +1454,34 @@ class HomeScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 24),
                       ],
-                      Text(
-                        materialsOnly ? 'Semua materi' : 'Materi terbaru',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            materialsOnly ? 'Semua materi' : 'Materi terbaru',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.ink,
+                            ),
+                          ),
+                          if (!materialsOnly)
+                            TextButton.icon(
+                              onPressed: () => context.go('/materials'),
+                              iconAlignment: IconAlignment.end,
+                              icon: const Icon(
+                                Icons.arrow_forward_rounded,
+                                size: 16,
+                              ),
+                              label: const Text(
+                                'Lihat semua',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       if (materialsOnly && materialsAsync.hasValue)
@@ -1468,10 +1492,8 @@ class HomeScreen extends ConsumerWidget {
                             color: AppColors.inkSecondary,
                           ),
                         ),
-                      if (!materialsOnly) const SizedBox(height: 12),
-                      ref
-                          .watch(coursesProvider)
-                          .when(
+                      if (!materialsOnly) const SizedBox(height: 8),
+                      ref.watch(coursesProvider).when(
                             loading: () => const LinearProgressIndicator(),
                             error: (_, _) => TextButton(
                               onPressed: () => ref.invalidate(coursesProvider),
@@ -1489,14 +1511,9 @@ class HomeScreen extends ConsumerWidget {
                                     selected:
                                         ref.watch(selectedCourseProvider) ==
                                         null,
-                                    onTap: () =>
-                                        ref
-                                                .read(
-                                                  selectedCourseProvider
-                                                      .notifier,
-                                                )
-                                                .state =
-                                            null,
+                                    onTap: () => ref
+                                        .read(selectedCourseProvider.notifier)
+                                        .state = null,
                                   ),
                                   for (final course in courses)
                                     Padding(
@@ -1507,14 +1524,11 @@ class HomeScreen extends ConsumerWidget {
                                         selected:
                                             ref.watch(selectedCourseProvider) ==
                                             course.id,
-                                        onTap: () =>
-                                            ref
-                                                    .read(
-                                                      selectedCourseProvider
-                                                          .notifier,
-                                                    )
-                                                    .state =
-                                                course.id,
+                                        onTap: () => ref
+                                            .read(
+                                              selectedCourseProvider.notifier,
+                                            )
+                                            .state = course.id,
                                       ),
                                     ),
                                   if (courses.isEmpty)
@@ -1570,11 +1584,9 @@ class HomeScreen extends ConsumerWidget {
                               ChoiceChip(
                                 label: Text(entry.value),
                                 selected: status == entry.key,
-                                onSelected: (_) =>
-                                    ref
-                                        .read(_materialStatusProvider.notifier)
-                                        .state = entry
-                                        .key,
+                                onSelected: (_) => ref
+                                    .read(_materialStatusProvider.notifier)
+                                    .state = entry.key,
                               ),
                           ],
                         ),
@@ -1649,15 +1661,16 @@ class HomeScreen extends ConsumerWidget {
                     return ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
                       itemCount: materials.length,
                       itemBuilder: (context, index) {
                         final material = materials[index];
                         final isDone = material.status == 'done';
-                        final dark = materialsOnly && index.isEven;
+                        final isEven = index.isEven;
+                        final dark = materialsOnly && isEven;
 
                         return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
+                          margin: const EdgeInsets.only(bottom: 14),
                           padding: const EdgeInsets.all(18),
                           decoration: BoxDecoration(
                             color: materialsOnly
@@ -1666,11 +1679,14 @@ class HomeScreen extends ConsumerWidget {
                                       : AppColors.lavenderCard)
                                 : Colors.white,
                             borderRadius: BorderRadius.circular(24),
+                            border: materialsOnly
+                                ? null
+                                : Border.all(color: AppColors.borderLine),
                             boxShadow: const [
                               BoxShadow(
-                                color: Color(0x0F000000),
-                                blurRadius: 3,
-                                offset: Offset(0, 1),
+                                color: Color(0x0A000000),
+                                blurRadius: 12,
+                                offset: Offset(0, 4),
                               ),
                             ],
                           ),
@@ -1678,50 +1694,106 @@ class HomeScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Expanded(
+                                  Container(
+                                    width: 46,
+                                    height: 46,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: dark
+                                          ? Colors.white.withValues(alpha: 0.12)
+                                          : (isEven
+                                                ? AppColors.peachSoft
+                                                : AppColors.lavenderSoft),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
                                     child: Text(
-                                      material.title,
+                                      material.fileType.toUpperCase(),
                                       style: TextStyle(
-                                        fontSize: 17,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.w800,
                                         color: dark
                                             ? Colors.white
-                                            : AppColors.ink,
+                                            : AppColors.charcoal,
                                       ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  if (MediaQuery.sizeOf(context).width > 360)
-                                    _buildStatusBadge(material.status),
-                                  IconButton(
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          material.title,
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w800,
+                                            color: dark
+                                                ? Colors.white
+                                                : AppColors.ink,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Flexible(
+                                              child: Text(
+                                                '${material.fileType.toUpperCase()}${material.pageCount == null ? '' : ' • ${material.pageCount} halaman'}',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: dark
+                                                      ? Colors.white70
+                                                      : AppColors.inkSecondary,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            _buildStatusBadge(material.status),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  PopupMenuButton<String>(
                                     tooltip: 'Hapus materi ${material.title}',
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(
-                                      minWidth: 44,
-                                      minHeight: 44,
+                                    icon: Icon(
+                                      Icons.more_vert_rounded,
+                                      color: dark
+                                          ? Colors.white70
+                                          : AppColors.inkSecondary,
                                     ),
-                                    icon: const Icon(
-                                      Icons.delete_outline_rounded,
-                                      color: Color(0xFFEF4444),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
-                                    onPressed: () =>
-                                        _deleteMaterial(context, ref, material),
+                                    onSelected: (value) {
+                                      if (value == 'delete') {
+                                        _deleteMaterial(context, ref, material);
+                                      }
+                                    },
+                                    itemBuilder: (context) => const [
+                                      PopupMenuItem(
+                                        value: 'delete',
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.delete_outline_rounded,
+                                              size: 18,
+                                              color: Color(0xFFEF4444),
+                                            ),
+                                            SizedBox(width: 8),
+                                            Text('Hapus materi'),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${material.fileType.toUpperCase()}${material.pageCount == null ? '' : '  •  ${material.pageCount} halaman'}',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: dark
-                                      ? Colors.white70
-                                      : AppColors.inkSecondary,
-                                ),
                               ),
                               if (materialsOnly)
                                 Align(
@@ -1730,8 +1802,8 @@ class HomeScreen extends ConsumerWidget {
                                     tooltip: 'Buka ringkasan ${material.title}',
                                     onPressed: isDone
                                         ? () => context.push(
-                                            '/materials/${material.id}/summary',
-                                          )
+                                              '/materials/${material.id}/summary',
+                                            )
                                         : null,
                                     style: IconButton.styleFrom(
                                       backgroundColor: Colors.white,
@@ -1745,57 +1817,68 @@ class HomeScreen extends ConsumerWidget {
                                     icon: const Icon(Icons.arrow_forward),
                                   ),
                                 ),
-                              if (!materialsOnly) const SizedBox(height: 18),
-                              if (!materialsOnly)
-                                Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
+                              if (!materialsOnly) ...[
+                                const SizedBox(height: 14),
+                                Row(
                                   children: [
-                                    _actionButton(
-                                      context,
-                                      Icons.article_outlined,
-                                      'Ringkasan',
-                                      isDone,
-                                      () => context.push(
-                                        '/materials/${material.id}/summary',
+                                    Expanded(
+                                      child: _actionButton(
+                                        context,
+                                        Icons.article_outlined,
+                                        'Ringkasan',
+                                        isDone,
+                                        () => context.push(
+                                          '/materials/${material.id}/summary',
+                                        ),
+                                        primary,
                                       ),
-                                      primary,
                                     ),
-                                    const SizedBox(height: 8),
-                                    _actionButton(
-                                      context,
-                                      Icons.style_outlined,
-                                      'Flashcard',
-                                      isDone,
-                                      () => context.push(
-                                        '/materials/${material.id}/flashcards',
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _actionButton(
+                                        context,
+                                        Icons.style_outlined,
+                                        'Flashcard',
+                                        isDone,
+                                        () => context.push(
+                                          '/materials/${material.id}/flashcards',
+                                        ),
+                                        primary,
                                       ),
-                                      primary,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _actionButton(
-                                      context,
-                                      Icons.quiz_outlined,
-                                      'Kuis',
-                                      isDone,
-                                      () => context.push(
-                                        '/materials/${material.id}/quiz',
-                                      ),
-                                      primary,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _actionButton(
-                                      context,
-                                      Icons.chat_bubble_outline_rounded,
-                                      'AI Tutor',
-                                      isDone,
-                                      () => context.push(
-                                        '/materials/${material.id}/chat',
-                                      ),
-                                      primary,
                                     ),
                                   ],
                                 ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _actionButton(
+                                        context,
+                                        Icons.quiz_outlined,
+                                        'Kuis',
+                                        isDone,
+                                        () => context.push(
+                                          '/materials/${material.id}/quiz',
+                                        ),
+                                        primary,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _actionButton(
+                                        context,
+                                        Icons.chat_bubble_outline_rounded,
+                                        'AI Tutor',
+                                        isDone,
+                                        () => context.push(
+                                          '/materials/${material.id}/chat',
+                                        ),
+                                        AppColors.charcoal,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ],
                           ),
                         );
@@ -1820,50 +1903,52 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
                   child: Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.peachSoft,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: AppColors.borderLine),
+                      border: Border.all(color: AppColors.peachBorder),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        const Text(
-                          'Tambahkan materi baru',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Text(
+                                'Tambahkan materi baru',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.ink,
+                                ),
+                              ),
+                              SizedBox(height: 3),
+                              Text(
+                                'PDF atau PPTX • Maks. 20 MB',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.inkSecondary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'PDF atau PPTX • Maks. 20 MB',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.inkSecondary,
+                        const SizedBox(width: 12),
+                        FilledButton.icon(
+                          onPressed: () => context.go(
+                            '/materials/upload/${Uri.encodeComponent(ref.read(selectedCourseProvider) ?? 'course-123')}',
                           ),
-                        ),
-                        const SizedBox(height: 14),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: () => context.go(
-                              '/materials/upload/${Uri.encodeComponent(ref.read(selectedCourseProvider) ?? 'course-123')}',
-                            ),
-                            icon: const Icon(
-                              Icons.upload_file_rounded,
-                              size: 18,
-                            ),
-                            label: const Text('Tambah materi'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.charcoal,
-                              minimumSize: const Size.fromHeight(48),
-                              shape: const StadiumBorder(),
-                            ),
+                          icon: const Icon(Icons.upload_file_rounded, size: 18),
+                          label: const Text('Tambah materi'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.charcoal,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(0, 44),
+                            shape: const StadiumBorder(),
                           ),
                         ),
                       ],
@@ -1975,7 +2060,7 @@ class HomeScreen extends ConsumerWidget {
         colors[status] ??
         (const Color(0xFFF3F4F6), const Color(0xFF6B7280), 'Unknown');
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: value.$1,
         borderRadius: BorderRadius.circular(999),
@@ -1983,8 +2068,8 @@ class HomeScreen extends ConsumerWidget {
       child: Text(
         value.$3,
         style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
           color: value.$2,
         ),
       ),
@@ -1999,31 +2084,35 @@ class HomeScreen extends ConsumerWidget {
     VoidCallback onTap,
     Color primary,
   ) {
+    final isChat = label == 'AI Tutor';
     return SizedBox(
-      height: 48,
-      child: OutlinedButton.icon(
+      height: 40,
+      child: FilledButton.tonalIcon(
         onPressed: isActive ? onTap : null,
         icon: Icon(
           icon,
-          size: 18,
-          color: isActive ? primary : const Color(0xFF9CA3AF),
+          size: 16,
+          color: !isActive
+              ? const Color(0xFF9CA3AF)
+              : (isChat ? Colors.white : AppColors.charcoal),
         ),
         label: Text(
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: isActive ? primary : const Color(0xFF9CA3AF),
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: !isActive
+                ? const Color(0xFF9CA3AF)
+                : (isChat ? Colors.white : AppColors.charcoal),
           ),
         ),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: primary,
-          backgroundColor: isActive ? Colors.white : const Color(0xFFF3F4F6),
-          side: BorderSide(
-            color: isActive ? const Color(0xFFE5E7EB) : Colors.transparent,
-          ),
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          backgroundColor: !isActive
+              ? const Color(0xFFF3F4F6)
+              : (isChat ? AppColors.charcoal : AppColors.surface),
           shape: const StadiumBorder(),
         ),
       ),
