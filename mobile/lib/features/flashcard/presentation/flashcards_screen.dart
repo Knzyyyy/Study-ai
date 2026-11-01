@@ -1,3 +1,4 @@
+import '../../../core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'flashcard_controller.dart';
@@ -43,7 +44,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
     final flashcardsAsync = ref.watch(flashcardsProvider(widget.materialId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F5FC),
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
@@ -126,7 +127,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                 Text(
                   'Kartu ${currentIndex + 1} dari ${cards.length}',
                   style: const TextStyle(
-                    color: Color(0xFF716B80),
+                    color: AppColors.inkSecondary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -145,13 +146,13 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       color: showBack
-                          ? const Color(0xFFEAE3F7)
-                          : const Color(0xFFF2EDF9),
-                      borderRadius: BorderRadius.circular(16),
+                          ? AppColors.lavenderCard
+                          : AppColors.lavenderSoft,
+                      borderRadius: BorderRadius.circular(24),
                       border: Border.all(
                         color: showBack
-                            ? const Color(0xFF7560B5)
-                            : const Color(0xFFE7E2F0),
+                            ? AppColors.primaryDark
+                            : AppColors.borderLine,
                         width: 2,
                       ),
                       boxShadow: [
@@ -174,7 +175,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: const Color(0xFF7560B5),
+                                color: AppColors.primaryDark,
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -192,7 +193,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                 const SizedBox(height: 8),
                 const Text(
                   '(Ketuk kartu untuk membalik)',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF716B80)),
+                  style: TextStyle(fontSize: 12, color: AppColors.inkSecondary),
                 ),
                 const SizedBox(height: 16),
                 FilledButton.icon(

@@ -1,3 +1,4 @@
+import '../../../core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'summary_controller.dart';
@@ -11,12 +12,12 @@ class SummaryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summaryAsync = ref.watch(summaryProvider(materialId));
-    const primary = Color(0xFF7560B5);
-    const heading = Color(0xFF30283F);
-    const secondary = Color(0xFF716B80);
+    const primary = AppColors.primaryDark;
+    const heading = AppColors.charcoal;
+    const secondary = AppColors.inkSecondary;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F5FC),
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
         title: const Text(
           'Ringkasan Materi',
@@ -75,10 +76,10 @@ class SummaryScreen extends ConsumerWidget {
                 padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFFF2EDF9), Color(0xFFF7F5FC)],
+                    colors: [AppColors.lavenderSoft, AppColors.surface],
                   ),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFE7E2F0)),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: AppColors.borderLine),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,8 +144,8 @@ class SummaryScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFFFFF),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFE7E2F0)),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: AppColors.borderLine),
                     boxShadow: const [
                       BoxShadow(
                         color: Color(0x0A000000),
@@ -164,7 +165,7 @@ class SummaryScreen extends ConsumerWidget {
                             height: 34,
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFEAE3F7),
+                              color: AppColors.lavenderCard,
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
@@ -231,7 +232,7 @@ class SummaryScreen extends ConsumerWidget {
                       ),
                       if (section.keyTerms.isNotEmpty) ...[
                         const SizedBox(height: 10),
-                        const Divider(color: Color(0xFFE7E2F0)),
+                        const Divider(color: AppColors.borderLine),
                         const SizedBox(height: 14),
                         const Text(
                           'ISTILAH PENTING',

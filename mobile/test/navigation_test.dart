@@ -29,26 +29,20 @@ void main() {
         ),
       ),
     );
-    expect(find.byType(InkWell), findsNWidgets(6));
-    expect(find.byType(AnimatedScale), findsNWidgets(5));
-    expect(
-      tester.getTopLeft(find.byIcon(Icons.add_rounded)).dy,
-      lessThan(tester.getTopLeft(find.byIcon(Icons.home_rounded)).dy),
-    );
-    expect(find.text('Upload'), findsOneWidget);
-    for (final label in [
-      'Beranda',
-      'Materi',
-      'Upload',
-      'Kuis',
-      'Profil',
-    ]) {
-      await tester.tap(find.text(label));
+    expect(find.byType(InkWell), findsNWidgets(5));
+    expect(find.byType(AnimatedScale), findsNothing);
+    expect(find.text('Upload'), findsNothing);
+    const types = [
+      Icons.home_rounded,
+      Icons.menu_book_rounded,
+      Icons.add_rounded,
+      Icons.assignment_turned_in_outlined,
+      Icons.person_outline_rounded,
+    ];
+    for (var index = 0; index < types.length; index++) {
+      await tester.tap(find.byIcon(types[index]));
       await tester.pump();
-      expect(
-        selected,
-        ['Beranda', 'Materi', 'Upload', 'Kuis', 'Profil'].indexOf(label),
-      );
+      expect(selected, index);
     }
     expect(tester.takeException(), isNull);
   });

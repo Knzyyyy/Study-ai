@@ -138,7 +138,7 @@ void main() {
         child: const MaterialApp(home: MaterialsScreen(courseId: 'course')),
       ),
     );
-    final analyze = find.widgetWithText(FilledButton, 'Mulai Analisis');
+    final analyze = find.widgetWithText(FilledButton, 'Mulai Pemrosesan');
     expect(tester.widget<FilledButton>(analyze).onPressed, isNull);
     await tester.tap(find.text('Pilih Dokumen'));
     await tester.pumpAndSettle();

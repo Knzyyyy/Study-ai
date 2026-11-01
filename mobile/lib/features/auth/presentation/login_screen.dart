@@ -1,3 +1,4 @@
+import '../../../core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -53,16 +54,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
-    const primary = Color(0xFF7560B5);
-    const heading = Color(0xFF30283F);
-    const secondary = Color(0xFF716B80);
+    const primary = AppColors.primaryDark;
+    const heading = AppColors.ink;
+    const secondary = AppColors.inkSecondary;
     final inputBorder = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: Color(0xFFE7E2F0)),
+      borderRadius: BorderRadius.circular(24),
+      borderSide: const BorderSide(color: AppColors.borderLine),
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F5FC),
+      backgroundColor: AppColors.surface,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -72,8 +73,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               padding: const EdgeInsets.fromLTRB(18, 40, 18, 28),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE7E2F0)),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColors.borderLine),
                 boxShadow: const [
                   BoxShadow(
                     color: Color(0x10000000),
@@ -87,8 +88,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF2EDF9),
-                      borderRadius: BorderRadius.circular(14),
+                      color: AppColors.lavenderSoft,
+                      borderRadius: BorderRadius.circular(24),
                     ),
                     child: const Icon(
                       Icons.auto_awesome_rounded,
@@ -114,9 +115,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF2EDF9),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFE7E2F0)),
+                      color: AppColors.lavenderSoft,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: AppColors.borderLine),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,9 +220,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             label: const Text('Masuk'),
                             style: FilledButton.styleFrom(
                               backgroundColor: primary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
+                              shape: const StadiumBorder(),
                               textStyle: const TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -267,10 +266,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               style: TextStyle(color: heading),
                             ),
                             style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Color(0xFFE7E2F0)),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                              side: const BorderSide(
+                                color: AppColors.borderLine,
                               ),
+                              shape: const StadiumBorder(),
                             ),
                           ),
                         ),
@@ -296,7 +295,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 12),
                   const Text(
                     'Kebijakan Privasi   •   Panduan Etika Akademik',
-                    style: TextStyle(fontSize: 10, color: Color(0xFF716B80)),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: AppColors.inkSecondary,
+                    ),
                   ),
                 ],
               ),

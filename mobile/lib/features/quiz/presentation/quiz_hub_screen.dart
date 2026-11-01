@@ -1,3 +1,4 @@
+import '../../../core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -25,7 +26,7 @@ class QuizHubScreen extends ConsumerWidget {
     final materials = ref.watch(materialsListProvider);
     final progress = ref.watch(quizProgressProvider);
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F5FC),
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
         title: const Text(
           'Kuis',
@@ -75,7 +76,7 @@ class QuizHubScreen extends ConsumerWidget {
           Expanded(
             child: materials.when(
               loading: () => const Center(
-                child: CircularProgressIndicator(color: Color(0xFF7560B5)),
+                child: CircularProgressIndicator(color: AppColors.primaryDark),
               ),
               error: (error, _) =>
                   Center(child: Text('Gagal memuat materi: $error')),
@@ -97,8 +98,10 @@ class QuizHubScreen extends ConsumerWidget {
                             elevation: 0,
                             color: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              side: const BorderSide(color: Color(0xFFE7E2F0)),
+                              borderRadius: BorderRadius.circular(24),
+                              side: const BorderSide(
+                                color: AppColors.borderLine,
+                              ),
                             ),
                             child: ListTile(
                               contentPadding: const EdgeInsets.symmetric(
@@ -106,11 +109,11 @@ class QuizHubScreen extends ConsumerWidget {
                                 vertical: 8,
                               ),
                               leading: CircleAvatar(
-                                backgroundColor: const Color(0xFFF2EDF9),
+                                backgroundColor: AppColors.lavenderSoft,
                                 child: Icon(
                                   Icons.quiz_outlined,
                                   color: enabled
-                                      ? const Color(0xFF7560B5)
+                                      ? AppColors.primaryDark
                                       : Colors.grey,
                                 ),
                               ),

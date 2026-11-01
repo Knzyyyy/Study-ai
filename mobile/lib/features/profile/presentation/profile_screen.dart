@@ -1,3 +1,4 @@
+import '../../../core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -96,18 +97,18 @@ class ProfileStatistics extends ConsumerWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE7E2F0)),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.borderLine),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: const Color(0xFF7560B5), size: 19),
+          Icon(icon, color: AppColors.primaryDark, size: 19),
           const SizedBox(height: 12),
           value,
           Text(
             label,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF716B80)),
+            style: const TextStyle(fontSize: 12, color: AppColors.inkSecondary),
           ),
         ],
       ),
@@ -312,9 +313,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'Pengguna';
     final nim = _metadataText(user?.userMetadata?['nim']);
     final email = user?.email ?? 'Belum ada email';
-    const primary = Color(0xFF7560B5);
+    const primary = AppColors.primaryDark;
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F5FC),
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
         title: const Text(
           'Profil',
@@ -331,20 +332,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFE7E2F0)),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.borderLine),
             ),
             child: Row(
               children: [
                 CircleAvatar(
                   radius: 32,
-                  backgroundColor: const Color(0xFFEAE3F7),
+                  backgroundColor: AppColors.lavenderCard,
                   child: Text(
                     _initials(name),
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF7560B5),
+                      color: AppColors.primaryDark,
                     ),
                   ),
                 ),
@@ -365,7 +366,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         nim == null ? 'NIM belum diisi' : 'NIM: $nim',
                         style: const TextStyle(
                           fontSize: 13,
-                          color: Color(0xFF716B80),
+                          color: AppColors.inkSecondary,
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -375,7 +376,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF716B80),
+                          color: AppColors.inkSecondary,
                         ),
                       ),
                     ],
@@ -468,9 +469,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(48),
               side: const BorderSide(color: Color(0xFFFECACA)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: const StadiumBorder(),
             ),
           ),
         ],
@@ -489,9 +488,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _setting(IconData icon, String title, String subtitle) => ListTile(
     contentPadding: EdgeInsets.zero,
-    leading: Icon(icon, color: const Color(0xFF7560B5)),
+    leading: Icon(icon, color: AppColors.primaryDark),
     title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
     subtitle: Text(subtitle),
-    trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF716B80)),
+    trailing: const Icon(
+      Icons.chevron_right_rounded,
+      color: AppColors.inkSecondary,
+    ),
   );
 }

@@ -1,3 +1,4 @@
+import '../../../core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../home/presentation/home_screen.dart' show materialsListProvider;
@@ -148,7 +149,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           materialTitle == null ? 'AI Tutor' : 'AI Tutor · $materialTitle',
           overflow: TextOverflow.ellipsis,
         ),
-        backgroundColor: const Color(0xFF7560B5),
+        backgroundColor: AppColors.charcoal,
         foregroundColor: Colors.white,
       ),
       body: chatState.isLoading
@@ -201,7 +202,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           ),
                           decoration: BoxDecoration(
                             color: isUser
-                                ? const Color(0xFFEAE3F7)
+                                ? AppColors.lavenderCard
                                 : const Color(0xFFFFFFFF),
                             borderRadius: BorderRadius.only(
                               topLeft: const Radius.circular(16),
@@ -265,7 +266,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       CircleAvatar(
                         backgroundColor: chatState.isTyping
                             ? Colors.grey
-                            : const Color(0xFF7560B5),
+                            : AppColors.charcoal,
                         radius: 24,
                         child: IconButton(
                           icon: const Icon(Icons.send, color: Colors.white),

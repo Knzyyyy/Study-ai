@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/theme/app_colors.dart';
 import 'quiz_controller.dart';
 import 'quiz_review_screen.dart';
 
@@ -114,7 +115,7 @@ class QuizScreen extends ConsumerWidget {
               const Icon(
                 Icons.quiz_outlined,
                 size: 80,
-                color: Color(0xFF7560B5),
+                color: AppColors.primaryDark,
               ),
               const SizedBox(height: 16),
               const Text(
@@ -196,7 +197,7 @@ class QuizScreen extends ConsumerWidget {
             margin: const EdgeInsets.only(bottom: 24),
             elevation: 2,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(24),
             ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -226,7 +227,7 @@ class QuizScreen extends ConsumerWidget {
                         }
                       },
                       contentPadding: EdgeInsets.zero,
-                      activeColor: const Color(0xFF7560B5),
+                      activeColor: AppColors.primaryDark,
                     );
                   }),
                 ],

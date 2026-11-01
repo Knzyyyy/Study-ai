@@ -45,12 +45,11 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Materi\nKuliah'), findsOneWidget);
-    expect(find.byType(AppBar), findsNothing);
-    expect(find.widgetWithText(FilledButton, 'Mata Kuliah'), findsOneWidget);
+    expect(find.text('Materi'), findsOneWidget);
+    expect(find.byType(AppBar), findsOneWidget);
     expect(
       tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
-      const Color(0xFFF8FAFF),
+      const Color(0xFFFBF9F5),
     );
     final card = tester.widget<Container>(
       find
@@ -60,25 +59,25 @@ void main() {
           )
           .first,
     );
-    expect((card.decoration! as BoxDecoration).color, Colors.white);
+    expect((card.decoration! as BoxDecoration).color, const Color(0xFF22252A));
     expect(
       (card.decoration! as BoxDecoration).borderRadius,
-      BorderRadius.circular(28),
+      BorderRadius.circular(24),
     );
-    expect(find.text('2 mata kuliah'), findsOneWidget);
-    expect(find.text('2 materi'), findsOneWidget);
+    expect(find.text('2 Materi'), findsOneWidget);
     expect(find.text('Materi one'), findsOneWidget);
-    expect(find.text('Materi two'), findsOneWidget);
+    expect(find.text('Materi two'), findsNothing);
     expect(tester.takeException(), isNull);
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Matematika'));
+    await tester.tap(find.text('Matematika').last);
     await tester.pumpAndSettle();
     expect(find.text('Materi one'), findsOneWidget);
     expect(find.text('Materi two'), findsNothing);
     expect(find.byType(CourseProgressCard), findsOneWidget);
-    expect(find.text('2 materi'), findsOneWidget);
     expect(tester.takeException(), isNull);
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Semua'));
+    await tester.ensureVisible(find.text('Semua course'));
+    await tester.tap(find.text('Semua course'));
     await tester.pumpAndSettle();
+    expect(find.text('Materi one'), findsOneWidget);
     expect(find.text('Materi two'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

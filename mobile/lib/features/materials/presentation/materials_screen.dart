@@ -1,3 +1,4 @@
+import '../../../core/theme/app_colors.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -114,12 +115,12 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
     final selectedCourse = validCourseSelection(candidate, courses)
         ? candidate
         : null;
-    const primary = Color(0xFF7560B5);
-    const heading = Color(0xFF30283F);
-    const secondary = Color(0xFF716B80);
+    const primary = AppColors.primaryDark;
+    const heading = AppColors.ink;
+    const secondary = AppColors.inkSecondary;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F5FC),
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
@@ -131,7 +132,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF2EDF9),
+                color: AppColors.lavenderSoft,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(
@@ -165,7 +166,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
             margin: const EdgeInsets.only(right: 16),
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFE7E2F0)),
+              border: Border.all(color: AppColors.borderLine),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -177,7 +178,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 22, 20, 150),
+        padding: const EdgeInsets.fromLTRB(20, 22, 20, 110),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -193,6 +194,29 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
             const Text(
               'Unggah slide atau dokumen untuk diproses oleh AI.',
               style: TextStyle(fontSize: 14, height: 1.45, color: secondary),
+            ),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Materi Kuliah',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Pilih course dan file untuk mulai belajar.',
+                      style: TextStyle(color: AppColors.inkSecondary),
+                    ),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 18),
             coursesAsync.when(
@@ -230,6 +254,8 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+            _uploadBox(state.isLoading || _submitting || _picking, primary),
             TextButton.icon(
               onPressed: state.isLoading || _submitting
                   ? null
@@ -243,7 +269,6 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
               label: const Text('Tambah baru'),
             ),
             const SizedBox(height: 18),
-            _uploadBox(state.isLoading || _submitting || _picking, primary),
             if (state.isLoading) ...[
               const SizedBox(height: 14),
               _processingCard(primary),
@@ -316,9 +341,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
                 ),
                 style: FilledButton.styleFrom(
                   backgroundColor: primary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  shape: const StadiumBorder(),
                   textStyle: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
@@ -329,68 +352,70 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
     );
   }
 
-  Widget _uploadBox(bool loading, Color primary) => InkWell(
-    onTap: loading ? null : _pickFile,
-    borderRadius: BorderRadius.circular(14),
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(
-          color: const Color(0xFFE7E2F0),
-          style: BorderStyle.solid,
+  Widget _uploadBox(bool loading, Color primary) => Material(
+    color: AppColors.lavenderSoft,
+    borderRadius: BorderRadius.circular(24),
+    child: InkWell(
+      onTap: loading ? null : _pickFile,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.lavenderBorder, width: 2),
+          borderRadius: BorderRadius.circular(24),
         ),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF2EDF9),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.cloud_upload_outlined, color: primary, size: 24),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            _selectedFile?.name ?? 'Pilih file PDF atau PPTX',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF30283F),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _selectedFile == null
-                ? 'Klik untuk memilih dokumen\n(Maks. 20 MB)'
-                : '${(_selectedFile!.size / (1024 * 1024)).toStringAsFixed(2)} MB',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              height: 1.4,
-              color: Color(0xFF716B80),
-            ),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: loading ? null : _pickFile,
-            icon: const Icon(Icons.folder_open_outlined, size: 16),
-            label: Text(
-              _selectedFile == null ? 'Pilih Dokumen' : 'Ganti Dokumen',
-            ),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: primary,
-              minimumSize: const Size(130, 40),
-              side: const BorderSide(color: Color(0xFFE7E2F0)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.cloud_upload_outlined,
+                color: primary,
+                size: 28,
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            Text(
+              _selectedFile?.name ?? 'Pilih file PDF atau PPTX',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: AppColors.charcoal,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _selectedFile == null
+                  ? 'Klik untuk memilih dokumen (Maks. 20 MB)'
+                  : '${(_selectedFile!.size / (1024 * 1024)).toStringAsFixed(2)} MB',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.inkSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: loading ? null : _pickFile,
+              icon: const Icon(Icons.folder_open_outlined, size: 16),
+              label: Text(
+                _selectedFile == null ? 'Pilih Dokumen' : 'Ganti Dokumen',
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: primary,
+                minimumSize: const Size(130, 44),
+                side: const BorderSide(color: AppColors.borderLine),
+                shape: const StadiumBorder(),
+              ),
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -399,8 +424,8 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
     padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: const Color(0xFFE7E2F0)),
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: AppColors.borderLine),
     ),
     child: const Row(
       children: [
@@ -412,7 +437,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF30283F),
+              color: AppColors.charcoal,
             ),
           ),
         ),
@@ -424,8 +449,8 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
     padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const Color(0xFFE7E2F0)),
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: AppColors.borderLine),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -435,7 +460,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF30283F),
+            color: AppColors.charcoal,
           ),
         ),
         const SizedBox(height: 8),
@@ -475,8 +500,8 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
     padding: const EdgeInsets.symmetric(horizontal: 10),
     height: 44,
     decoration: BoxDecoration(
-      color: const Color(0xFFF2EDF9),
-      borderRadius: BorderRadius.circular(8),
+      color: AppColors.lavenderSoft,
+      borderRadius: BorderRadius.circular(24),
     ),
     child: Row(
       children: [
@@ -485,7 +510,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF30283F)),
+            style: const TextStyle(fontSize: 12, color: AppColors.charcoal),
           ),
         ),
         Switch(
@@ -504,7 +529,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
       color: const Color(0xFFFEF2F2),
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(24),
     ),
     child: Text(
       error,

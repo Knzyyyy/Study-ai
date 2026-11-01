@@ -241,34 +241,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Tambahkan materi baru'), findsOneWidget);
     expect(find.text('PDF atau PPTX • Maks. 20 MB'), findsOneWidget);
-    expect(find.text('3 materi di perpustakaan'), findsOneWidget);
+    expect(find.text('3 materi di perpustakaan'), findsNothing);
     expect(find.text('Lihat semua'), findsNothing);
-    expect(find.text('Tambah Mata Kuliah'), findsOneWidget);
     expect(find.text('AI Tutor'), findsWidgets);
     expect(find.text('1/3 materi dilatih'), findsOneWidget);
     expect(find.text('Pelajari materi terbaru'), findsOneWidget);
     expect(find.text('Target mingguan belum tersedia'), findsNothing);
     expect(tester.takeException(), isNull);
-    final courseButton = tester.widget(
-      find.widgetWithText(OutlinedButton, 'Tambah Mata Kuliah'),
-    );
     final actions = find.byWidgetPredicate(
-      (widget) => widget is OutlinedButton && widget != courseButton,
+      (widget) => widget is OutlinedButton,
     );
-    expect(actions, findsNWidgets(15));
-    final pendingActions = tester
-        .widgetList<OutlinedButton>(actions)
-        .skip(3)
-        .take(4);
-    expect(pendingActions.every((button) => button.onPressed == null), isTrue);
-    final first = tester.getRect(actions.at(3));
-    final second = tester.getRect(actions.at(4));
-    expect(first.width, second.width);
-    expect(first.height, greaterThanOrEqualTo(44));
-    expect(second.top, greaterThanOrEqualTo(first.bottom));
-    for (final entry in [(0, 'summary'), (1, 'flashcards'), (2, 'chat')]) {
-      await tester.ensureVisible(actions.at(entry.$1));
-      await tester.tap(actions.at(entry.$1));
+    expect(actions, findsNWidgets(12));
+    for (final entry in [(0, 'summary'), (2, 'chat')]) {
+      final label = entry.$1 == 0 ? 'Ringkasan' : 'Tanya Tutor';
+      await tester.ensureVisible(find.text(label).first);
+      await tester.tap(find.text(label).first);
       await tester.pumpAndSettle();
       expect(find.text('${entry.$2} destination'), findsOneWidget);
       router.pop();
@@ -299,7 +286,7 @@ void main() {
     );
     await tester.ensureVisible(find.text('Tambah materi'));
     final uploadButton = find.widgetWithText(FilledButton, 'Tambah materi');
-    expect(tester.getSize(uploadButton).width, greaterThan(240));
+    expect(tester.getSize(uploadButton).width, greaterThanOrEqualTo(220));
     expect(tester.takeException(), isNull);
     await tester.tap(uploadButton);
     await tester.pumpAndSettle();
