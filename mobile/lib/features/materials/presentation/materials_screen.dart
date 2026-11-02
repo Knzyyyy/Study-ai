@@ -1,11 +1,12 @@
-import '../../../core/theme/app_colors.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:file_picker/file_picker.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/study_visuals.dart';
 import '../../home/presentation/home_screen.dart';
-import 'materials_controller.dart';
 import 'courses.dart';
+import 'materials_controller.dart';
 
 class MaterialsScreen extends ConsumerStatefulWidget {
   final String courseId;
@@ -18,13 +19,19 @@ class MaterialsScreen extends ConsumerStatefulWidget {
 
 class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
   String? _courseId;
-  bool _generateSummary = true;
-  bool _generateFlashcards = true;
-  bool _generateQuiz = true;
+  final _titleController = TextEditingController();
+  final _noteController = TextEditingController();
 
   PlatformFile? _selectedFile;
   bool _picking = false;
   bool _submitting = false;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickFile() async {
     if (_picking ||
@@ -54,7 +61,17 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
         _showSelectionError('File tidak dapat dibaca.');
         return;
       }
-      setState(() => _selectedFile = file);
+      setState(() {
+        _selectedFile = file;
+        if (_titleController.text.trim().isEmpty) {
+          // Otomatis isi judul dari nama file tanpa ekstensi
+          final nameWithoutExt = file.name.replaceAll(
+            RegExp(r'\.[^./\\]+$'),
+            '',
+          );
+          _titleController.text = nameWithoutExt;
+        }
+      });
     } catch (_) {
       if (mounted) _showSelectionError('Gagal memilih dokumen.');
     } finally {
@@ -82,15 +99,21 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
         ref.read(materialsControllerProvider).isLoading) {
       return;
     }
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
+      _showSelectionError('Isi judul materi terlebih dahulu.');
+      return;
+    }
     setState(() => _submitting = true);
     try {
       final success = await ref
           .read(materialsControllerProvider.notifier)
           .uploadMaterial(
             courseId: courseId,
-            generateSummary: _generateSummary,
-            generateFlashcards: _generateFlashcards,
-            generateQuiz: _generateQuiz,
+            title: title,
+            generateSummary: true,
+            generateFlashcards: true,
+            generateQuiz: true,
             bytes: file.bytes,
             filePath: kIsWeb || file.bytes != null ? null : file.path,
             fileName: file.name,
@@ -98,8 +121,17 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
           );
       if (!mounted) return;
       if (success) {
-        setState(() => _selectedFile = null);
+        setState(() {
+          _selectedFile = null;
+          _titleController.clear();
+          _noteController.clear();
+        });
         ref.invalidate(materialsListProvider);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Materi berhasil diunggah dan diproses!'),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -115,234 +147,471 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
     final selectedCourse = validCourseSelection(candidate, courses)
         ? candidate
         : null;
-    const primary = AppColors.primaryDark;
-    const heading = AppColors.ink;
-    const secondary = AppColors.inkSecondary;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final topInset = MediaQuery.paddingOf(context).top;
+
+    final canSubmit =
+        !state.isLoading &&
+        !_submitting &&
+        !_picking &&
+        _selectedFile != null &&
+        _titleController.text.trim().isNotEmpty &&
+        !coursesAsync.isLoading &&
+        !coursesAsync.hasError &&
+        selectedCourse != null;
+
+    final inputBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(18),
+      borderSide: const BorderSide(color: AppColors.borderLine, width: 1.5),
+    );
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        elevation: 0,
-        titleSpacing: 18,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.lavenderSoft,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.auto_awesome_rounded,
-                color: primary,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Text(
-              'MindSpark AI',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: heading,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          Center(
-            child: Text(
-              ref.watch(courseUserProvider).valueOrNull == null
-                  ? ''
-                  : 'Mahasiswa',
-              style: TextStyle(fontSize: 12, color: secondary),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.borderLine),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.person_outline_rounded,
-              size: 18,
-              color: secondary,
-            ),
-          ),
-        ],
-      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 22, 20, 110),
+        padding: EdgeInsets.fromLTRB(20, topInset + 20, 20, 148 + bottomInset),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // JUDUL UTAMA & DESKRIPSI (Persis Referensi)
             const Text(
-              'Unggah Materi',
+              'Upload materi',
               style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: heading,
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: AppColors.charcoal,
+                letterSpacing: -0.5,
               ),
             ),
             const SizedBox(height: 6),
             const Text(
-              'Unggah slide atau dokumen untuk diproses oleh AI.',
-              style: TextStyle(fontSize: 14, height: 1.45, color: secondary),
-            ),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Materi Kuliah',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.ink,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Pilih course dan file untuk mulai belajar.',
-                      style: TextStyle(color: AppColors.inkSecondary),
-                    ),
-                  ],
-                ),
+              'Tambahkan PDF atau PPTX untuk mulai belajar dengan AI.',
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.4,
+                fontWeight: FontWeight.w600,
+                color: AppColors.inkSecondary,
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 24),
+
+            // PILIH COURSE + TOMBOL BUAT COURSE BARU
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Pilih course',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.charcoal,
+                  ),
+                ),
+                TextButton(
+                  onPressed: state.isLoading || _submitting
+                      ? null
+                      : () async {
+                          final course = await showAddCourseDialog(
+                            context,
+                            ref,
+                          );
+                          if (mounted && course != null) {
+                            setState(() => _courseId = course.id);
+                          }
+                        },
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    '+ Buat course baru',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // DROPDOWN COURSE
             coursesAsync.when(
               loading: () => const LinearProgressIndicator(),
               error: (_, _) => TextButton(
                 onPressed: () => ref.invalidate(coursesProvider),
-                child: const Text('Gagal memuat mata kuliah. Coba lagi'),
+                child: const Text('Gagal memuat course. Coba lagi'),
               ),
-              data: (courses) => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedCourse,
-                    key: ValueKey(selectedCourse),
-                    isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'Mata Kuliah'),
-                    hint: const Text('Pilih mata kuliah'),
-                    items: courses
-                        .map(
-                          (course) => DropdownMenuItem(
-                            value: course.id,
-                            child: Text(
-                              course.name,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: state.isLoading || _submitting
-                        ? null
-                        : (value) => setState(() => _courseId = value),
+              data: (courses) => DropdownButtonFormField<String>(
+                initialValue: selectedCourse,
+                key: ValueKey(selectedCourse),
+                isExpanded: true,
+                icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 16,
                   ),
-                  if (courses.isEmpty)
-                    const Text('Belum ada mata kuliah. Tambahkan dahulu.'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            _uploadBox(state.isLoading || _submitting || _picking, primary),
-            TextButton.icon(
-              onPressed: state.isLoading || _submitting
-                  ? null
-                  : () async {
-                      final course = await showAddCourseDialog(context, ref);
-                      if (mounted && course != null) {
-                        setState(() => _courseId = course.id);
-                      }
-                    },
-              icon: const Icon(Icons.add),
-              label: const Text('Tambah baru'),
-            ),
-            const SizedBox(height: 18),
-            if (state.isLoading) ...[
-              const SizedBox(height: 14),
-              _processingCard(primary),
-            ],
-            if (!state.isLoading &&
-                ref.read(materialsControllerProvider.notifier).materialId !=
-                    null) ...[
-              Text(
-                ref.read(materialsControllerProvider.notifier).status == 'done'
-                    ? 'Pemrosesan selesai. Materi siap dipelajari.'
-                    : ref.read(materialsControllerProvider.notifier).message ??
-                          'Materi belum selesai diproses',
-              ),
-              if (ref.read(materialsControllerProvider.notifier).status !=
-                  'done')
-                TextButton(
-                  onPressed: () {
-                    final controller = ref.read(
-                      materialsControllerProvider.notifier,
-                    );
-                    if (controller.status == 'failed' ||
-                        controller.status == 'uploaded') {
-                      controller.retry();
-                    } else {
-                      controller.poll();
-                    }
-                  },
-                  child: Text(
-                    ref.read(materialsControllerProvider.notifier).status ==
-                                'failed' ||
-                            ref
-                                    .read(materialsControllerProvider.notifier)
-                                    .status ==
-                                'uploaded'
-                        ? 'Coba analisis lagi'
-                        : 'Periksa status',
+                  border: inputBorder,
+                  enabledBorder: inputBorder,
+                  focusedBorder: inputBorder.copyWith(
+                    borderSide: const BorderSide(
+                      color: AppColors.primary,
+                      width: 2,
+                    ),
                   ),
                 ),
+                hint: const Text('Pilih mata kuliah'),
+                items: courses
+                    .map(
+                      (course) => DropdownMenuItem(
+                        value: course.id,
+                        child: Text(
+                          course.name,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: state.isLoading || _submitting
+                    ? null
+                    : (value) => setState(() => _courseId = value),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // JUDUL MATERI INPUT
+            const Text(
+              'Judul materi',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: AppColors.charcoal,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _titleController,
+              onChanged: (_) => setState(() {}),
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.ink,
+              ),
+              decoration: InputDecoration(
+                hintText: 'Contoh: Normalisasi Database',
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 16,
+                ),
+                border: inputBorder,
+                enabledBorder: inputBorder,
+                focusedBorder: inputBorder.copyWith(
+                  borderSide: const BorderSide(
+                    color: AppColors.primary,
+                    width: 2,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // AREA FILE TERPILIH ATAU TOMBOL UPLOAD KOTAK
+            if (_selectedFile == null)
+              Material(
+                color: AppColors.lavenderSoft,
+                borderRadius: BorderRadius.circular(22),
+                child: InkWell(
+                  onTap: state.isLoading || _submitting || _picking
+                      ? null
+                      : _pickFile,
+                  borderRadius: BorderRadius.circular(22),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 28,
+                      horizontal: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: AppColors.lavenderBorder,
+                        width: 2,
+                      ),
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          alignment: Alignment.center,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.cloud_upload_outlined,
+                            color: AppColors.primaryDark,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Pilih file PDF atau PPTX',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.charcoal,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Klik untuk memilih dokumen (Maks. 20 MB)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.inkSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        OutlinedButton.icon(
+                          onPressed: state.isLoading || _submitting || _picking
+                              ? null
+                              : _pickFile,
+                          icon: const Icon(
+                            Icons.folder_open_outlined,
+                            size: 16,
+                          ),
+                          label: const Text('Pilih file'),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: AppColors.charcoal,
+                            minimumSize: const Size(130, 42),
+                            side: const BorderSide(color: AppColors.borderLine),
+                            shape: const StadiumBorder(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            else
+              // KARTU FILE TERPILIH (Persis Gambar Referensi)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: AppColors.borderLine, width: 1.5),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x0A16181D),
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppColors.lavenderSoft,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        _selectedFile!.extension?.toUpperCase() ?? 'PDF',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primaryDark,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _selectedFile!.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.charcoal,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${_selectedFile!.extension?.toUpperCase() ?? 'PDF'} • ${(_selectedFile!.size / (1024 * 1024)).toStringAsFixed(1)} MB • Siap diunggah',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.inkSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _pickFile,
+                      child: const Text(
+                        'Ganti',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primaryDark,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Hapus file',
+                      onPressed: () => setState(() => _selectedFile = null),
+                      icon: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: Color(0xFFEF4444),
+                        size: 20,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            const SizedBox(height: 20),
+
+            // CATATAN OPSIONAL (FOKUS BAB / TOPIK)
+            const Text(
+              'Catatan opsional (fokus bab/topik)',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: AppColors.charcoal,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _noteController,
+              maxLines: 3,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.ink,
+              ),
+              decoration: InputDecoration(
+                hintText:
+                    'Contoh: Fokuskan ringkasan pada studi kasus 2NF dan 3NF...',
+                hintStyle: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.inkMeta,
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.all(18),
+                border: inputBorder,
+                enabledBorder: inputBorder,
+                focusedBorder: inputBorder.copyWith(
+                  borderSide: const BorderSide(
+                    color: AppColors.primary,
+                    width: 2,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // STATUS LOADING / ERROR
+            if (state.isLoading) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.charcoal,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Row(
+                  children: [
+                    SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: AppColors.peach,
+                      ),
+                    ),
+                    SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        'Sedang mengunggah dan memproses materi...',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
             ],
-            const SizedBox(height: 18),
-            _optionsCard(primary),
+
             if (state.maybeWhen(
               error: (_, _) => true,
               orElse: () => false,
             )) ...[
-              const SizedBox(height: 14),
-              state.maybeWhen(
-                error: (error, _) => _errorCard(error.toString()),
-                orElse: () => const SizedBox.shrink(),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEE2E2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  state.maybeWhen(
+                    error: (e, _) => e.toString(),
+                    orElse: () => 'Terjadi kesalahan.',
+                  ),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFB91C1C),
+                  ),
+                ),
               ),
+              const SizedBox(height: 18),
             ],
-            const SizedBox(height: 18),
+
+            // TOMBOL UTAMA "Upload materi" (Persis Desain Referensi)
             SizedBox(
               width: double.infinity,
-              height: 52,
+              height: 56,
               child: FilledButton.icon(
-                onPressed:
-                    state.isLoading ||
-                        _submitting ||
-                        _picking ||
-                        _selectedFile == null ||
-                        coursesAsync.isLoading ||
-                        coursesAsync.hasError ||
-                        selectedCourse == null
-                    ? null
-                    : _analyzeFile,
-                icon: const Icon(Icons.auto_awesome_rounded, size: 19),
-                label: Text(
-                  state.isLoading ? 'Memproses materi...' : 'Mulai Pemrosesan',
-                ),
+                onPressed: canSubmit ? _analyzeFile : null,
                 style: FilledButton.styleFrom(
-                  backgroundColor: primary,
+                  backgroundColor: AppColors.charcoal,
+                  disabledBackgroundColor: const Color(0xFFE2DDD5),
+                  foregroundColor: Colors.white,
                   shape: const StadiumBorder(),
-                  textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                icon: const Icon(
+                  Icons.upload_file_rounded,
+                  size: 20,
+                  color: AppColors.peach,
+                ),
+                label: Text(
+                  state.isLoading ? 'Mengunggah...' : 'Upload materi',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ),
@@ -351,189 +620,4 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
       ),
     );
   }
-
-  Widget _uploadBox(bool loading, Color primary) => Material(
-    color: AppColors.lavenderSoft,
-    borderRadius: BorderRadius.circular(24),
-    child: InkWell(
-      onTap: loading ? null : _pickFile,
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.lavenderBorder, width: 2),
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.cloud_upload_outlined,
-                color: primary,
-                size: 28,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              _selectedFile?.name ?? 'Pilih file PDF atau PPTX',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: AppColors.charcoal,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _selectedFile == null
-                  ? 'Klik untuk memilih dokumen (Maks. 20 MB)'
-                  : '${(_selectedFile!.size / (1024 * 1024)).toStringAsFixed(2)} MB',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.inkSecondary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: loading ? null : _pickFile,
-              icon: const Icon(Icons.folder_open_outlined, size: 16),
-              label: Text(
-                _selectedFile == null ? 'Pilih Dokumen' : 'Ganti Dokumen',
-              ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: primary,
-                minimumSize: const Size(130, 44),
-                side: const BorderSide(color: AppColors.borderLine),
-                shape: const StadiumBorder(),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-
-  Widget _processingCard(Color primary) => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(color: AppColors.borderLine),
-    ),
-    child: const Row(
-      children: [
-        CircularProgressIndicator(strokeWidth: 3, color: Color(0xFF9275CD)),
-        SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            'Mengunggah dan memproses materi...',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppColors.charcoal,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-
-  Widget _optionsCard(Color primary) => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(color: AppColors.borderLine),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Opsi Hasil AI',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-            color: AppColors.charcoal,
-          ),
-        ),
-        const SizedBox(height: 8),
-        _optionRow(
-          Icons.article_outlined,
-          'Ringkasan Eksekutif',
-          primary,
-          _generateSummary,
-          (value) => setState(() => _generateSummary = value),
-        ),
-        _optionRow(
-          Icons.style_outlined,
-          'Maks. 10 Flashcards Cerdas',
-          primary,
-          _generateFlashcards,
-          (value) => setState(() => _generateFlashcards = value),
-        ),
-        _optionRow(
-          Icons.quiz_outlined,
-          'Kuis Pemahaman',
-          primary,
-          _generateQuiz,
-          (value) => setState(() => _generateQuiz = value),
-        ),
-      ],
-    ),
-  );
-
-  Widget _optionRow(
-    IconData icon,
-    String label,
-    Color primary,
-    bool value,
-    ValueChanged<bool> onChanged,
-  ) => Container(
-    margin: const EdgeInsets.only(top: 6),
-    padding: const EdgeInsets.symmetric(horizontal: 10),
-    height: 44,
-    decoration: BoxDecoration(
-      color: AppColors.lavenderSoft,
-      borderRadius: BorderRadius.circular(24),
-    ),
-    child: Row(
-      children: [
-        Icon(icon, size: 17, color: primary),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: AppColors.charcoal),
-          ),
-        ),
-        Switch(
-          value: value,
-          onChanged: ref.watch(materialsControllerProvider).isLoading
-              ? null
-              : onChanged,
-          activeThumbColor: primary,
-        ),
-      ],
-    ),
-  );
-
-  Widget _errorCard(String error) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: const Color(0xFFFEF2F2),
-      borderRadius: BorderRadius.circular(24),
-    ),
-    child: Text(
-      error,
-      style: const TextStyle(fontSize: 13, color: Color(0xFFB91C1C)),
-    ),
-  );
 }

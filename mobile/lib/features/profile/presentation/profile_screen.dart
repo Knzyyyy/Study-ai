@@ -319,8 +319,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         title: const Text(
           'Profil',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
         ),
+        titleSpacing: 18,
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
         elevation: 0,

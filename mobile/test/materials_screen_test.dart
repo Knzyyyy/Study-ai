@@ -46,11 +46,13 @@ class TestRepository extends MaterialRepository {
 
   int uploads = 0;
   bool? summary;
+  String? lastTitle;
   final completion = Completer<void>();
 
   @override
   Future<String> uploadAndCreateMaterial({
     required String courseId,
+    String? title,
     File? file,
     Uint8List? bytes,
     required String fileName,
@@ -62,6 +64,7 @@ class TestRepository extends MaterialRepository {
     uploads++;
     summary = generateSummary;
     expect(courseId, '123e4567-e89b-12d3-a456-426614174000');
+    lastTitle = title;
     expect(fileName, 'slides.pdf');
     expect(fileType, 'pdf');
     expect(file?.path, '/slides.pdf');
@@ -95,6 +98,7 @@ void main() {
       repository.completion.complete();
       await controller.uploadMaterial(
         courseId: '123e4567-e89b-12d3-a456-426614174000',
+        title: 'Slides',
         filePath: '/slides.pdf',
         fileName: 'slides.pdf',
         fileType: 'pdf',
@@ -146,6 +150,10 @@ void main() {
     expect(find.text('slides.pdf'), findsOneWidget);
     expect(find.text('0.00 MB'), findsOneWidget);
     expect(tester.widget<FilledButton>(analyze).onPressed, isNull);
+    await tester.enterText(
+      find.byType(TextField).first,
+      'Normalisasi Database',
+    );
     await tester.tap(find.byType(DropdownButtonFormField<String>));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Matematika').last);
@@ -157,6 +165,7 @@ void main() {
     await tester.tap(analyze);
     await tester.pump();
     expect(repository.uploads, 1);
+    expect(repository.lastTitle, 'Normalisasi Database');
     expect(repository.summary, false);
     expect(
       tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,

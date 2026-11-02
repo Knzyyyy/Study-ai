@@ -122,33 +122,59 @@ class ChatController extends StateNotifier<ChatState> {
         );
         state = state.copyWith(messages: messages);
       }
-      if (mounted && generation == _generation) {
-        try {
-          final history = await _repository.getHistory(sessionId);
-          if (!mounted || generation != _generation) return;
-          state = state.copyWith(
-            messages: history,
-            error: null,
-            historyError: false,
-          );
-        } catch (e) {
-          state = state.copyWith(
-            error: 'Riwayat chat gagal dimuat. Respons sudah diterima.',
-            historyError: true,
-          );
-        }
-      }
+      // The streamed response is already the source of truth for this turn.
+      // Fetching history here created a second failure point after a successful
+      // response and could show a misleading send error to the user.
     } catch (e) {
       if (mounted && generation == _generation) {
+        try {
+          // The server persists completed answers before closing the stream.
+          // Wait briefly for persistence if the stream closes before the
+          // server finishes writing the response.
+          for (var attempt = 0; attempt < 8; attempt++) {
+            if (attempt > 0) {
+              await Future<void>.delayed(Duration(milliseconds: 500 * attempt));
+            }
+            if (!mounted || generation != _generation) return;
+            final history = await _repository.getHistory(sessionId);
+            if (!mounted || generation != _generation) return;
+            final userMessageIndex = history.lastIndexWhere(
+              (message) => message.role == 'user' && message.content == text,
+            );
+            final hasSavedAnswer =
+                userMessageIndex >= 0 &&
+                history
+                    .skip(userMessageIndex + 1)
+                    .any(
+                      (message) =>
+                          message.role == 'assistant' &&
+                          message.content.trim().isNotEmpty,
+                    );
+            if (hasSavedAnswer) {
+              state = state.copyWith(messages: history, clearError: true);
+              return;
+            }
+          }
+        } catch (_) {
+          // Keep any partial response visible if history cannot be recovered.
+        }
+
+        if (!mounted || generation != _generation) return;
         final messages = List<ChatMessage>.from(state.messages);
-        if (messages.isNotEmpty &&
+        final hasPartialResponse =
+            messages.isNotEmpty &&
             messages.last.role == 'assistant' &&
-            messages.last.content.isEmpty) {
+            messages.last.content.isNotEmpty;
+        if (!hasPartialResponse &&
+            messages.isNotEmpty &&
+            messages.last.role == 'assistant') {
           messages.removeLast();
         }
         state = state.copyWith(
           messages: messages,
-          error: 'Respons gagal diterima. Coba kirim ulang.',
+          error: hasPartialResponse
+              ? 'Koneksi terputus. Sebagian jawaban mungkin belum lengkap.'
+              : 'Respons gagal diterima. Periksa koneksi lalu coba lagi.',
           historyError: false,
         );
       }

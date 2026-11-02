@@ -1,6 +1,7 @@
 import '../../../core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'summary_controller.dart';
 import '../data/summary_repository.dart';
 
@@ -19,6 +20,17 @@ class SummaryScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
+        leading: IconButton(
+          tooltip: 'Kembali',
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/');
+            }
+          },
+        ),
         title: const Text(
           'Ringkasan Materi',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),

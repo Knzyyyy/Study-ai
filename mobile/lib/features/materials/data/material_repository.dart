@@ -14,6 +14,7 @@ class MaterialRepository {
   /// 1. Upload file ke Supabase Storage dan buat row di database tabel 'materials'
   Future<String> uploadAndCreateMaterial({
     required String courseId,
+    String? title,
     File? file,
     Uint8List? bytes,
     required String fileName,
@@ -68,7 +69,7 @@ class MaterialRepository {
           .insert({
             'course_id': courseId,
             'user_id': user.id,
-            'title': fileName,
+            'title': title ?? fileName,
             'file_path': filePathInStorage,
             'file_type': fileType,
             'status': 'uploaded',

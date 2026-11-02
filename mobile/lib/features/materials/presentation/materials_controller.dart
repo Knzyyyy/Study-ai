@@ -29,6 +29,7 @@ class MaterialsController extends StateNotifier<AsyncValue<void>> {
 
   Future<bool> uploadMaterial({
     required String courseId,
+    String? title,
     String? filePath,
     Uint8List? bytes,
     required String fileName,
@@ -50,6 +51,7 @@ class MaterialsController extends StateNotifier<AsyncValue<void>> {
     try {
       final id = await _repository.uploadAndCreateMaterial(
         courseId: courseId,
+        title: title ?? fileName,
         file: filePath == null ? null : File(filePath),
         bytes: bytes,
         fileName: fileName,

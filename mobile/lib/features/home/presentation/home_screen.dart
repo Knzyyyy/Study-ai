@@ -17,6 +17,14 @@ final homeUserProvider = StreamProvider<User?>((ref) async* {
   yield* auth.onAuthStateChange.map((event) => event.session?.user);
 });
 
+final homeScrollControllerProvider = Provider.autoDispose<ScrollController>((
+  ref,
+) {
+  final controller = ScrollController(keepScrollOffset: false);
+  ref.onDispose(controller.dispose);
+  return controller;
+});
+
 String homeUserName(User? user) {
   for (final value in [
     user?.userMetadata?['full_name'],
@@ -394,7 +402,7 @@ class _ContinueLearning extends StatelessWidget {
                 const SizedBox(height: 18),
                 FilledButton.icon(
                   onPressed: () =>
-                      context.go('/materials/${material.id}/summary'),
+                      context.push('/materials/${material.id}/summary'),
                   icon: const Icon(Icons.arrow_forward_rounded, size: 20),
                   label: const Text('Lanjut belajar'),
                   style: FilledButton.styleFrom(
@@ -471,7 +479,7 @@ class _CanvasMaterialsLibraryScreenState
   String? _status;
   String _query = '';
   String _sort = 'Terbaru';
-  bool _hasChosenCourse = false;
+  bool _hasChosenCourse = true;
 
   Future<void> _deleteMaterial(MaterialModel material) async {
     final confirmed = await showDialog<bool>(
@@ -512,10 +520,6 @@ class _CanvasMaterialsLibraryScreenState
     final materialsAsync = ref.watch(materialsListProvider);
     final courses = coursesAsync.valueOrNull ?? const <Course>[];
     final allMaterials = materialsAsync.valueOrNull ?? const <MaterialModel>[];
-    if (!_hasChosenCourse && courses.isNotEmpty) {
-      _selectedCourseId = courses.first.id;
-      _hasChosenCourse = true;
-    }
     final effectiveCourse =
         _hasChosenCourse &&
             courses.any((course) => course.id == _selectedCourseId)
@@ -574,10 +578,6 @@ class _CanvasMaterialsLibraryScreenState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _courseSelector(coursesAsync, courses),
-                      if (_hasChosenCourse) ...[
-                        const SizedBox(height: 14),
-                        CourseProgressCard(materials: courseMaterials),
-                      ],
                       const SizedBox(height: 20),
                       TextField(
                         onChanged: (value) => setState(() => _query = value),
@@ -867,37 +867,81 @@ class _CanvasMaterialsLibraryScreenState
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
+          _allCoursesPill(),
           for (final course in courses)
             Padding(
               padding: const EdgeInsets.only(right: 10),
               child: _coursePill(course),
             ),
-          Material(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(999),
-            child: InkWell(
-              onTap: () => setState(() {
-                _selectedCourseId = null;
-                _hasChosenCourse = true;
-              }),
+        ],
+      ),
+    );
+  }
+
+  Widget _allCoursesPill() {
+    final selected = _selectedCourseId == null;
+    final count =
+        (ref.watch(materialsListProvider).valueOrNull ??
+                const <MaterialModel>[])
+            .length;
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: Material(
+        color: selected ? AppColors.charcoal : Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        child: InkWell(
+          onTap: () => setState(() {
+            _selectedCourseId = null;
+            _hasChosenCourse = true;
+          }),
+          borderRadius: BorderRadius.circular(999),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(999),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 13,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: AppColors.borderLine),
-                ),
-                child: const Text(
-                  'Semua course',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
+              border: Border.all(
+                color: selected ? AppColors.charcoal : AppColors.borderLine,
               ),
             ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.folder_rounded,
+                  size: 18,
+                  color: selected ? AppColors.peach : AppColors.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Semua course',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: selected ? Colors.white : AppColors.ink,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: selected ? Colors.white24 : AppColors.surfaceSubtle,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '$count',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: selected ? Colors.white : AppColors.inkSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1018,17 +1062,23 @@ class _CanvasMaterialsLibraryScreenState
     };
     final date =
         '${material.createdAt.day}/${material.createdAt.month}/${material.createdAt.year}';
+    final title =
+        material.title.toLowerCase().endsWith(
+          '.${material.fileType.toLowerCase()}',
+        )
+        ? material.title
+        : '${material.title}.${material.fileType.toLowerCase()}';
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       decoration: BoxDecoration(
         color: dark ? AppColors.charcoal : AppColors.lavenderCard,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(26),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x18000000),
-            blurRadius: 12,
-            offset: Offset(0, 5),
+            color: Color(0x16000000),
+            blurRadius: 9,
+            offset: Offset(0, 4),
           ),
         ],
       ),
@@ -1038,19 +1088,21 @@ class _CanvasMaterialsLibraryScreenState
           Row(
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: 34,
+                height: 34,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: .12),
+                  color: dark
+                      ? Colors.white.withValues(alpha: .12)
+                      : Colors.white.withValues(alpha: .65),
                   shape: BoxShape.circle,
                 ),
                 child: Text(
                   material.fileType.toUpperCase(),
                   style: TextStyle(
-                    fontSize: 9,
+                    fontSize: 9.5,
                     fontWeight: FontWeight.w800,
-                    color: foreground,
+                    color: dark ? AppColors.peach : AppColors.primaryDark,
                   ),
                 ),
               ),
@@ -1069,11 +1121,13 @@ class _CanvasMaterialsLibraryScreenState
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 11,
-                  vertical: 7,
+                  horizontal: 10,
+                  vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: statusColor,
+                  color: material.status == 'done'
+                      ? const Color(0xFF145C4D)
+                      : statusColor,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Row(
@@ -1102,54 +1156,77 @@ class _CanvasMaterialsLibraryScreenState
               const SizedBox(width: 4),
               IconButton(
                 tooltip: 'Hapus materi ${material.title}',
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints.tightFor(
+                  width: 34,
+                  height: 34,
+                ),
+                padding: EdgeInsets.zero,
                 onPressed: () => _deleteMaterial(material),
-                icon: Icon(Icons.more_horiz_rounded, color: foreground),
+                icon: Icon(
+                  Icons.more_horiz_rounded,
+                  size: 20,
+                  color: foreground,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
-            material.title,
-            maxLines: 2,
+            title,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 19,
+              fontSize: 18,
               fontWeight: FontWeight.w800,
               color: foreground,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
           Text(
             '${material.pageCount == null ? '' : '${material.pageCount} halaman • '}$date',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               color: dark ? Colors.white70 : AppColors.inkSecondary,
             ),
           ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
+          const SizedBox(height: 10),
+          Row(
             children: [
               if (material.status == 'done') ...[
-                _cardAction(Icons.style_outlined, 'Flashcard', foreground),
+                _cardAction(
+                  Icons.style_outlined,
+                  'Flashcard',
+                  foreground,
+                  dark: dark,
+                  onTap: () =>
+                      context.push('/materials/${material.id}/flashcards'),
+                ),
+                const SizedBox(width: 6),
                 _cardAction(
                   Icons.article_outlined,
                   'Ringkasan & Kuis',
                   foreground,
+                  dark: dark,
+                  onTap: () =>
+                      context.push('/materials/${material.id}/summary'),
                 ),
               ],
+              const Spacer(),
               IconButton.filled(
-                tooltip: 'Buka materi ${material.title}',
-                onPressed: material.status == 'done'
-                    ? () => context.push('/materials/${material.id}/summary')
-                    : null,
+                tooltip: 'Detail materi ${material.title}',
+                onPressed: () =>
+                    context.push('/materials/${material.id}/detail'),
                 style: IconButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: AppColors.charcoal,
-                  minimumSize: const Size(48, 48),
+                  minimumSize: const Size(44, 44),
+                  maximumSize: const Size(44, 44),
+                  padding: EdgeInsets.zero,
                 ),
-                icon: const Icon(Icons.arrow_forward_rounded),
+                icon: const Icon(Icons.arrow_forward_rounded, size: 21),
               ),
             ],
           ),
@@ -1158,26 +1235,38 @@ class _CanvasMaterialsLibraryScreenState
     );
   }
 
-  Widget _cardAction(IconData icon, String text, Color foreground) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: .14),
+  Widget _cardAction(
+    IconData icon,
+    String text,
+    Color foreground, {
+    required bool dark,
+    required VoidCallback onTap,
+  }) => Material(
+    color: dark
+        ? Colors.white.withValues(alpha: .14)
+        : Colors.white.withValues(alpha: .7),
+    borderRadius: BorderRadius.circular(999),
+    child: InkWell(
+      onTap: onTap,
       borderRadius: BorderRadius.circular(999),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: foreground),
-        const SizedBox(width: 6),
-        Text(
-          text,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            color: foreground,
-          ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: foreground),
+            const SizedBox(width: 5),
+            Text(
+              text,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: foreground,
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     ),
   );
 
@@ -1239,7 +1328,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final materialsAsync = ref.watch(materialsListProvider);
     final name = homeUserName(ref.watch(homeUserProvider).valueOrNull);
-    final reducedMotion = MediaQuery.disableAnimationsOf(context);
+    final scrollController = ref.watch(homeScrollControllerProvider);
     const primary = AppColors.primaryDark;
     final search = materialsOnly ? ref.watch(_materialSearchProvider) : '';
     final status = materialsOnly ? ref.watch(_materialStatusProvider) : null;
@@ -1287,676 +1376,674 @@ class HomeScreen extends ConsumerWidget {
               ]
             : null,
       ),
-      body: TweenAnimationBuilder<double>(
-        tween: Tween(begin: reducedMotion ? 1 : 0, end: 1),
-        duration: reducedMotion
-            ? Duration.zero
-            : const Duration(milliseconds: 240),
-        builder: (context, opacity, child) =>
-            Opacity(opacity: opacity, child: child),
-        child: RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(quizProgressProvider);
-            ref.invalidate(flashcardReviewCountProvider);
-            final refreshed = ref.refresh(materialsListProvider.future);
-            await refreshed;
-          },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.only(
-              top: materialsOnly ? 0 : 18,
-              bottom: 148 + bottomInset,
-            ),
-            child: Column(
-              children: [
-                if (materialsOnly) ...[
-                  Container(
-                    width: double.infinity,
-                    color: AppColors.peach,
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Course &\nMateri',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                            StudyIllustration(),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            Chip(
-                              backgroundColor: AppColors.charcoal,
-                              label: Text(
-                                '${ref.watch(coursesProvider).valueOrNull?.length ?? "—"} Course',
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                            ),
-                            Chip(
-                              backgroundColor: AppColors.peachSoft,
-                              label: Text(
-                                '${materialsAsync.valueOrNull?.length ?? "—"} Materi',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Transform.translate(
-                    offset: const Offset(0, -24),
-                    child: const SizedBox(height: 24),
-                  ),
-                ],
-                if (!materialsOnly)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                    child: Semantics(
-                      container: true,
-                      label: 'Salam untuk $name. Siap belajar apa hari?',
-                      child: Row(
-                        children: [
-                          Tooltip(
-                            message: 'Buka profil',
-                            child: Semantics(
-                              button: true,
-                              label: 'Buka profil',
-                              child: InkWell(
-                                customBorder: const CircleBorder(),
-                                onTap: () => context.go('/profile'),
-                                child: CircleAvatar(
-                                  radius: 26,
-                                  backgroundColor: AppColors.lavenderCard,
-                                  child: Text(
-                                    name.characters.first.toUpperCase(),
-                                    style: const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.charcoal,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Halo, $name',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.ink,
-                                  ),
-                                ),
-                                const SizedBox(height: 5),
-                                const Text(
-                                  'Siap belajar hari ini?',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: AppColors.inkSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(quizProgressProvider);
+          ref.invalidate(flashcardReviewCountProvider);
+          final refreshed = ref.refresh(materialsListProvider.future);
+          await refreshed;
+        },
+        child: SingleChildScrollView(
+          controller: scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.only(
+            top: materialsOnly ? 0 : 18,
+            bottom: 148 + bottomInset,
+          ),
+          child: Column(
+            children: [
+              if (materialsOnly) ...[
+                Container(
+                  width: double.infinity,
+                  color: AppColors.peach,
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (!materialsOnly) ...[
-                        const Text(
-                          'Ringkasan belajar',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const HomeStatistics(),
-                        const SizedBox(height: 18),
-                        _ContinueLearning(
-                          materials: materialsAsync.valueOrNull ?? const [],
-                        ),
-                        const SizedBox(height: 18),
-                        _QuickActions(
-                          material: latestHomeMaterials(
-                            (materialsAsync.valueOrNull ??
-                                    const <MaterialModel>[])
-                                .where((item) => item.status == 'done')
-                                .toList(),
-                          ).firstOrNull,
-                        ),
-                        const SizedBox(height: 18),
-                        _HomeProgressCard(
-                          materials: materialsAsync.valueOrNull,
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      const Row(
                         children: [
-                          Text(
-                            materialsOnly ? 'Semua materi' : 'Materi terbaru',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.ink,
+                          Expanded(
+                            child: Text(
+                              'Course &\nMateri',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
-                          if (!materialsOnly)
-                            TextButton.icon(
-                              onPressed: () => context.go('/materials'),
-                              iconAlignment: IconAlignment.end,
-                              icon: const Icon(
-                                Icons.arrow_forward_rounded,
-                                size: 16,
-                              ),
-                              label: const Text(
-                                'Lihat semua',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
+                          StudyIllustration(),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      if (materialsOnly && materialsAsync.hasValue)
-                        Text(
-                          '${materialsAsync.valueOrNull!.length} materi di perpustakaan',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.inkSecondary,
-                          ),
-                        ),
-                      if (!materialsOnly) const SizedBox(height: 8),
-                      ref.watch(coursesProvider).when(
-                            loading: () => const LinearProgressIndicator(),
-                            error: (_, _) => TextButton(
-                              onPressed: () => ref.invalidate(coursesProvider),
-                              child: const Text(
-                                'Gagal memuat mata kuliah. Coba lagi',
-                              ),
-                            ),
-                            data: (courses) => SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: [
-                                  _courseChip(
-                                    context,
-                                    label: 'Semua',
-                                    selected:
-                                        ref.watch(selectedCourseProvider) ==
-                                        null,
-                                    onTap: () => ref
-                                        .read(selectedCourseProvider.notifier)
-                                        .state = null,
-                                  ),
-                                  for (final course in courses)
-                                    Padding(
-                                      padding: const EdgeInsets.only(left: 8),
-                                      child: _courseChip(
-                                        context,
-                                        label: course.name,
-                                        selected:
-                                            ref.watch(selectedCourseProvider) ==
-                                            course.id,
-                                        onTap: () => ref
-                                            .read(
-                                              selectedCourseProvider.notifier,
-                                            )
-                                            .state = course.id,
-                                      ),
-                                    ),
-                                  if (courses.isEmpty)
-                                    const Padding(
-                                      padding: EdgeInsets.only(left: 8),
-                                      child: Text('Belum ada mata kuliah'),
-                                    ),
-                                ],
-                              ),
+                      const SizedBox(height: 20),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          Chip(
+                            backgroundColor: AppColors.charcoal,
+                            label: Text(
+                              '${ref.watch(coursesProvider).valueOrNull?.length ?? "—"} Course',
+                              style: const TextStyle(color: Colors.white),
                             ),
                           ),
-                      if (materialsOnly) const SizedBox(height: 10),
-                      if (materialsOnly) ...[
-                        TextField(
-                          onChanged: (value) =>
-                              ref.read(_materialSearchProvider.notifier).state =
-                                  value.trim().toLowerCase(),
-                          decoration: InputDecoration(
-                            hintText: 'Cari materi...',
-                            prefixIcon: const Icon(Icons.search),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(999),
-                              borderSide: const BorderSide(
-                                color: AppColors.borderLine,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(999),
-                              borderSide: const BorderSide(
-                                color: AppColors.borderLine,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(999),
-                              borderSide: const BorderSide(
-                                color: AppColors.primary,
-                                width: 2,
-                              ),
+                          Chip(
+                            backgroundColor: AppColors.peachSoft,
+                            label: Text(
+                              '${materialsAsync.valueOrNull?.length ?? "—"} Materi',
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            for (final entry in const <String?, String>{
-                              null: 'Semua status',
-                              'done': 'Siap',
-                              'processing': 'Diproses',
-                              'failed': 'Gagal',
-                            }.entries)
-                              ChoiceChip(
-                                label: Text(entry.value),
-                                selected: status == entry.key,
-                                onSelected: (_) => ref
-                                    .read(_materialStatusProvider.notifier)
-                                    .state = entry.key,
-                              ),
-                          ],
-                        ),
-                      ],
-                      if (materialsOnly &&
-                          ref.watch(selectedCourseProvider) != null &&
-                          validCourseSelection(
-                            ref.watch(selectedCourseProvider),
-                            ref.watch(coursesProvider).valueOrNull ?? [],
-                          ))
-                        materialsAsync.when(
-                          data: (items) => CourseProgressCard(
-                            materials: filterMaterials(
-                              items,
-                              ref.watch(selectedCourseProvider),
-                            ),
-                          ),
-                          loading: () => const Text('Memuat materi...'),
-                          error: (_, _) => TextButton(
-                            onPressed: () =>
-                                ref.invalidate(materialsListProvider),
-                            child: const Text('Gagal memuat materi. Coba lagi'),
-                          ),
-                        ),
-                      if (materialsOnly)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: FilledButton.icon(
-                            onPressed: () => showAddCourseDialog(context, ref),
-                            icon: const Icon(Icons.add),
-                            label: const Text('Tambah course'),
-                          ),
-                        ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
-                materialsAsync.when(
-                  skipLoadingOnRefresh: false,
-                  data: (allMaterials) {
-                    final selected = ref.watch(selectedCourseProvider);
-                    final courses =
-                        ref.watch(coursesProvider).valueOrNull ?? [];
-                    final filtered = filterMaterials(
-                      allMaterials,
-                      validCourseSelection(selected, courses) ? selected : null,
-                    );
-                    final materials = materialsOnly
-                        ? filtered
-                              .where(
-                                (item) =>
-                                    item.title.toLowerCase().contains(search) &&
-                                    (status == null ||
-                                        item.status == status ||
-                                        (status == 'processing' &&
-                                            item.status == 'uploaded')),
-                              )
-                              .toList()
-                        : latestHomeMaterials(filtered);
-                    if (materials.isEmpty) {
-                      if (materialsOnly &&
-                          (search.isNotEmpty || status != null)) {
-                        return const Padding(
-                          padding: EdgeInsets.all(32),
-                          child: Text(
-                            'Tidak ada materi yang cocok. Coba kata kunci atau status lain.',
-                          ),
-                        );
-                      }
-                      return _emptyState(context, primary);
-                    }
-
-                    return ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                      itemCount: materials.length,
-                      itemBuilder: (context, index) {
-                        final material = materials[index];
-                        final isDone = material.status == 'done';
-                        final isEven = index.isEven;
-                        final dark = materialsOnly && isEven;
-
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 14),
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: materialsOnly
-                                ? (dark
-                                      ? AppColors.charcoal
-                                      : AppColors.lavenderCard)
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(24),
-                            border: materialsOnly
-                                ? null
-                                : Border.all(color: AppColors.borderLine),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x0A000000),
-                                blurRadius: 12,
-                                offset: Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    width: 46,
-                                    height: 46,
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: dark
-                                          ? Colors.white.withValues(alpha: 0.12)
-                                          : (isEven
-                                                ? AppColors.peachSoft
-                                                : AppColors.lavenderSoft),
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: Text(
-                                      material.fileType.toUpperCase(),
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                        color: dark
-                                            ? Colors.white
-                                            : AppColors.charcoal,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          material.title,
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w800,
-                                            color: dark
-                                                ? Colors.white
-                                                : AppColors.ink,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          children: [
-                                            Flexible(
-                                              child: Text(
-                                                '${material.fileType.toUpperCase()}${material.pageCount == null ? '' : ' • ${material.pageCount} halaman'}',
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: dark
-                                                      ? Colors.white70
-                                                      : AppColors.inkSecondary,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            _buildStatusBadge(material.status),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  PopupMenuButton<String>(
-                                    tooltip: 'Hapus materi ${material.title}',
-                                    icon: Icon(
-                                      Icons.more_vert_rounded,
-                                      color: dark
-                                          ? Colors.white70
-                                          : AppColors.inkSecondary,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    onSelected: (value) {
-                                      if (value == 'delete') {
-                                        _deleteMaterial(context, ref, material);
-                                      }
-                                    },
-                                    itemBuilder: (context) => const [
-                                      PopupMenuItem(
-                                        value: 'delete',
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.delete_outline_rounded,
-                                              size: 18,
-                                              color: Color(0xFFEF4444),
-                                            ),
-                                            SizedBox(width: 8),
-                                            Text('Hapus materi'),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              if (materialsOnly)
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: IconButton.filled(
-                                    tooltip: 'Buka ringkasan ${material.title}',
-                                    onPressed: isDone
-                                        ? () => context.push(
-                                              '/materials/${material.id}/summary',
-                                            )
-                                        : null,
-                                    style: IconButton.styleFrom(
-                                      backgroundColor: Colors.white,
-                                      foregroundColor: AppColors.charcoal,
-                                      side: const BorderSide(
-                                        color: AppColors.charcoal,
-                                        width: 2,
-                                      ),
-                                      minimumSize: const Size(48, 48),
-                                    ),
-                                    icon: const Icon(Icons.arrow_forward),
-                                  ),
-                                ),
-                              if (!materialsOnly) ...[
-                                const SizedBox(height: 14),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _actionButton(
-                                        context,
-                                        Icons.article_outlined,
-                                        'Ringkasan',
-                                        isDone,
-                                        () => context.push(
-                                          '/materials/${material.id}/summary',
-                                        ),
-                                        primary,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: _actionButton(
-                                        context,
-                                        Icons.style_outlined,
-                                        'Flashcard',
-                                        isDone,
-                                        () => context.push(
-                                          '/materials/${material.id}/flashcards',
-                                        ),
-                                        primary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _actionButton(
-                                        context,
-                                        Icons.quiz_outlined,
-                                        'Kuis',
-                                        isDone,
-                                        () => context.push(
-                                          '/materials/${material.id}/quiz',
-                                        ),
-                                        primary,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: _actionButton(
-                                        context,
-                                        Icons.chat_bubble_outline_rounded,
-                                        'AI Tutor',
-                                        isDone,
-                                        () => context.push(
-                                          '/materials/${material.id}/chat',
-                                        ),
-                                        AppColors.charcoal,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  },
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(color: primary),
-                  ),
-                  error: (_, _) => Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        const Text('Materi tidak tersedia. Periksa koneksi.'),
-                        TextButton(
-                          onPressed: () =>
-                              ref.invalidate(materialsListProvider),
-                          child: const Text('Coba lagi'),
-                        ),
-                      ],
-                    ),
-                  ),
+                Transform.translate(
+                  offset: const Offset(0, -24),
+                  child: const SizedBox(height: 24),
                 ),
+              ],
+              if (!materialsOnly)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: AppColors.peachSoft,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: AppColors.peachBorder),
-                    ),
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                  child: Semantics(
+                    container: true,
+                    label: 'Salam untuk $name. Siap belajar apa hari?',
                     child: Row(
                       children: [
+                        Tooltip(
+                          message: 'Buka profil',
+                          child: Semantics(
+                            button: true,
+                            label: 'Buka profil',
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: () => context.go('/profile'),
+                              child: CircleAvatar(
+                                radius: 26,
+                                backgroundColor: AppColors.lavenderCard,
+                                child: Text(
+                                  name.characters.first.toUpperCase(),
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.charcoal,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
+                            children: [
                               Text(
-                                'Tambahkan materi baru',
-                                style: TextStyle(
-                                  fontSize: 15,
+                                'Halo, $name',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 22,
                                   fontWeight: FontWeight.w800,
                                   color: AppColors.ink,
                                 ),
                               ),
-                              SizedBox(height: 3),
-                              Text(
-                                'PDF atau PPTX • Maks. 20 MB',
+                              const SizedBox(height: 5),
+                              const Text(
+                                'Siap belajar hari ini?',
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 13,
                                   color: AppColors.inkSecondary,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        FilledButton.icon(
-                          onPressed: () => context.go(
-                            '/materials/upload/${Uri.encodeComponent(ref.read(selectedCourseProvider) ?? 'course-123')}',
-                          ),
-                          icon: const Icon(Icons.upload_file_rounded, size: 18),
-                          label: const Text('Tambah materi'),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.charcoal,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size(0, 44),
-                            shape: const StadiumBorder(),
-                          ),
-                        ),
                       ],
                     ),
                   ),
                 ),
-              ],
-            ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (!materialsOnly) ...[
+                      const Text(
+                        'Ringkasan belajar',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const HomeStatistics(),
+                      const SizedBox(height: 18),
+                      _ContinueLearning(
+                        materials: materialsAsync.valueOrNull ?? const [],
+                      ),
+                      const SizedBox(height: 18),
+                      _QuickActions(
+                        material: latestHomeMaterials(
+                          (materialsAsync.valueOrNull ??
+                                  const <MaterialModel>[])
+                              .where((item) => item.status == 'done')
+                              .toList(),
+                        ).firstOrNull,
+                      ),
+                      const SizedBox(height: 18),
+                      _HomeProgressCard(materials: materialsAsync.valueOrNull),
+                      const SizedBox(height: 24),
+                    ],
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          materialsOnly ? 'Semua materi' : 'Materi terbaru',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.ink,
+                          ),
+                        ),
+                        if (!materialsOnly)
+                          TextButton.icon(
+                            onPressed: () => context.go('/materials'),
+                            iconAlignment: IconAlignment.end,
+                            icon: const Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 16,
+                            ),
+                            label: const Text(
+                              'Lihat semua',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (materialsOnly && materialsAsync.hasValue)
+                      Text(
+                        '${materialsAsync.valueOrNull!.length} materi di perpustakaan',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.inkSecondary,
+                        ),
+                      ),
+                    if (!materialsOnly) const SizedBox(height: 8),
+                    ref
+                        .watch(coursesProvider)
+                        .when(
+                          loading: () => const LinearProgressIndicator(),
+                          error: (_, _) => TextButton(
+                            onPressed: () => ref.invalidate(coursesProvider),
+                            child: const Text(
+                              'Gagal memuat mata kuliah. Coba lagi',
+                            ),
+                          ),
+                          data: (courses) => SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                _courseChip(
+                                  context,
+                                  label: 'Semua',
+                                  selected:
+                                      ref.watch(selectedCourseProvider) == null,
+                                  onTap: () =>
+                                      ref
+                                              .read(
+                                                selectedCourseProvider.notifier,
+                                              )
+                                              .state =
+                                          null,
+                                ),
+                                for (final course in courses)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: _courseChip(
+                                      context,
+                                      label: course.name,
+                                      selected:
+                                          ref.watch(selectedCourseProvider) ==
+                                          course.id,
+                                      onTap: () =>
+                                          ref
+                                              .read(
+                                                selectedCourseProvider.notifier,
+                                              )
+                                              .state = course
+                                              .id,
+                                    ),
+                                  ),
+                                if (courses.isEmpty)
+                                  const Padding(
+                                    padding: EdgeInsets.only(left: 8),
+                                    child: Text('Belum ada mata kuliah'),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    if (materialsOnly) const SizedBox(height: 10),
+                    if (materialsOnly) ...[
+                      TextField(
+                        onChanged: (value) =>
+                            ref.read(_materialSearchProvider.notifier).state =
+                                value.trim().toLowerCase(),
+                        decoration: InputDecoration(
+                          hintText: 'Cari materi...',
+                          prefixIcon: const Icon(Icons.search),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(999),
+                            borderSide: const BorderSide(
+                              color: AppColors.borderLine,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(999),
+                            borderSide: const BorderSide(
+                              color: AppColors.borderLine,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(999),
+                            borderSide: const BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final entry in const <String?, String>{
+                            null: 'Semua status',
+                            'done': 'Siap',
+                            'processing': 'Diproses',
+                            'failed': 'Gagal',
+                          }.entries)
+                            ChoiceChip(
+                              label: Text(entry.value),
+                              selected: status == entry.key,
+                              onSelected: (_) =>
+                                  ref
+                                      .read(_materialStatusProvider.notifier)
+                                      .state = entry
+                                      .key,
+                            ),
+                        ],
+                      ),
+                    ],
+                    if (materialsOnly &&
+                        ref.watch(selectedCourseProvider) != null &&
+                        validCourseSelection(
+                          ref.watch(selectedCourseProvider),
+                          ref.watch(coursesProvider).valueOrNull ?? [],
+                        ))
+                      materialsAsync.when(
+                        data: (items) => CourseProgressCard(
+                          materials: filterMaterials(
+                            items,
+                            ref.watch(selectedCourseProvider),
+                          ),
+                        ),
+                        loading: () => const Text('Memuat materi...'),
+                        error: (_, _) => TextButton(
+                          onPressed: () =>
+                              ref.invalidate(materialsListProvider),
+                          child: const Text('Gagal memuat materi. Coba lagi'),
+                        ),
+                      ),
+                    if (materialsOnly)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: FilledButton.icon(
+                          onPressed: () => showAddCourseDialog(context, ref),
+                          icon: const Icon(Icons.add),
+                          label: const Text('Tambah course'),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              materialsAsync.when(
+                skipLoadingOnRefresh: false,
+                data: (allMaterials) {
+                  final selected = ref.watch(selectedCourseProvider);
+                  final courses = ref.watch(coursesProvider).valueOrNull ?? [];
+                  final filtered = filterMaterials(
+                    allMaterials,
+                    validCourseSelection(selected, courses) ? selected : null,
+                  );
+                  final materials = materialsOnly
+                      ? filtered
+                            .where(
+                              (item) =>
+                                  item.title.toLowerCase().contains(search) &&
+                                  (status == null ||
+                                      item.status == status ||
+                                      (status == 'processing' &&
+                                          item.status == 'uploaded')),
+                            )
+                            .toList()
+                      : latestHomeMaterials(filtered);
+                  if (materials.isEmpty) {
+                    if (materialsOnly &&
+                        (search.isNotEmpty || status != null)) {
+                      return const Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Text(
+                          'Tidak ada materi yang cocok. Coba kata kunci atau status lain.',
+                        ),
+                      );
+                    }
+                    return _emptyState(context, primary);
+                  }
+
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                    itemCount: materials.length,
+                    itemBuilder: (context, index) {
+                      final material = materials[index];
+                      final isDone = material.status == 'done';
+                      final isEven = index.isEven;
+                      final dark = materialsOnly && isEven;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 14),
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: materialsOnly
+                              ? (dark
+                                    ? AppColors.charcoal
+                                    : AppColors.lavenderCard)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          border: materialsOnly
+                              ? null
+                              : Border.all(color: AppColors.borderLine),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x0A000000),
+                              blurRadius: 12,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: 46,
+                                  height: 46,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: dark
+                                        ? Colors.white.withValues(alpha: 0.12)
+                                        : (isEven
+                                              ? AppColors.peachSoft
+                                              : AppColors.lavenderSoft),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Text(
+                                    material.fileType.toUpperCase(),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      color: dark
+                                          ? Colors.white
+                                          : AppColors.charcoal,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        material.title,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          color: dark
+                                              ? Colors.white
+                                              : AppColors.ink,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              '${material.fileType.toUpperCase()}${material.pageCount == null ? '' : ' • ${material.pageCount} halaman'}',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: dark
+                                                    ? Colors.white70
+                                                    : AppColors.inkSecondary,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          _buildStatusBadge(material.status),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuButton<String>(
+                                  tooltip: 'Hapus materi ${material.title}',
+                                  icon: Icon(
+                                    Icons.more_vert_rounded,
+                                    color: dark
+                                        ? Colors.white70
+                                        : AppColors.inkSecondary,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  onSelected: (value) {
+                                    if (value == 'delete') {
+                                      _deleteMaterial(context, ref, material);
+                                    }
+                                  },
+                                  itemBuilder: (context) => const [
+                                    PopupMenuItem(
+                                      value: 'delete',
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.delete_outline_rounded,
+                                            size: 18,
+                                            color: Color(0xFFEF4444),
+                                          ),
+                                          SizedBox(width: 8),
+                                          Text('Hapus materi'),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            if (materialsOnly)
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: IconButton.filled(
+                                  tooltip: 'Buka ringkasan ${material.title}',
+                                  onPressed: isDone
+                                      ? () => context.push(
+                                          '/materials/${material.id}/summary',
+                                        )
+                                      : null,
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: AppColors.charcoal,
+                                    side: const BorderSide(
+                                      color: AppColors.charcoal,
+                                      width: 2,
+                                    ),
+                                    minimumSize: const Size(48, 48),
+                                  ),
+                                  icon: const Icon(Icons.arrow_forward),
+                                ),
+                              ),
+                            if (!materialsOnly) ...[
+                              const SizedBox(height: 14),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _actionButton(
+                                      context,
+                                      Icons.article_outlined,
+                                      'Ringkasan',
+                                      isDone,
+                                      () => context.push(
+                                        '/materials/${material.id}/summary',
+                                      ),
+                                      primary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _actionButton(
+                                      context,
+                                      Icons.style_outlined,
+                                      'Flashcard',
+                                      isDone,
+                                      () => context.push(
+                                        '/materials/${material.id}/flashcards',
+                                      ),
+                                      primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _actionButton(
+                                      context,
+                                      Icons.quiz_outlined,
+                                      'Kuis',
+                                      isDone,
+                                      () => context.push(
+                                        '/materials/${material.id}/quiz',
+                                      ),
+                                      primary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _actionButton(
+                                      context,
+                                      Icons.chat_bubble_outline_rounded,
+                                      'AI Tutor',
+                                      isDone,
+                                      () => context.push(
+                                        '/materials/${material.id}/chat',
+                                      ),
+                                      AppColors.charcoal,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: primary),
+                ),
+                error: (_, _) => Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      const Text('Materi tidak tersedia. Periksa koneksi.'),
+                      TextButton(
+                        onPressed: () => ref.invalidate(materialsListProvider),
+                        child: const Text('Coba lagi'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: AppColors.peachSoft,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: AppColors.peachBorder),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'Tambahkan materi baru',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.ink,
+                              ),
+                            ),
+                            SizedBox(height: 3),
+                            Text(
+                              'PDF atau PPTX • Maks. 20 MB',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.inkSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton.icon(
+                        onPressed: () => context.go(
+                          '/materials/upload/${Uri.encodeComponent(ref.read(selectedCourseProvider) ?? 'course-123')}',
+                        ),
+                        icon: const Icon(Icons.upload_file_rounded, size: 18),
+                        label: const Text('Tambah materi'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.charcoal,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(0, 44),
+                          shape: const StadiumBorder(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

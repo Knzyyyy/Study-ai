@@ -6,6 +6,7 @@ import 'package:tugas_akhir_mobpro/features/tutor_chat/domain/chat_model.dart';
 import 'package:tugas_akhir_mobpro/features/tutor_chat/presentation/chat_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tugas_akhir_mobpro/features/tutor_chat/data/chat_repository.dart';
+import 'package:tugas_akhir_mobpro/features/tutor_chat/presentation/chat_controller.dart';
 
 class SavedChatRepository extends ChatRepository {
   int created = 0;
@@ -27,6 +28,50 @@ class SavedChatRepository extends ChatRepository {
   Future<String> createSession(String materialId) async {
     created++;
     return 'new';
+  }
+}
+
+class SendChatRepository extends ChatRepository {
+  SendChatRepository({required this.stream, required this.savedHistory})
+    : super(Dio());
+
+  final Stream<String> stream;
+  final List<ChatMessage> savedHistory;
+  int historyReads = 0;
+
+  @override
+  Future<List<ChatSession>> getSessions(String materialId) async => [
+    ChatSession(id: 'session', title: 'Saved question'),
+  ];
+
+  @override
+  Future<List<ChatMessage>> getHistory(String sessionId) async {
+    historyReads++;
+    return savedHistory;
+  }
+
+  @override
+  Stream<String> sendMessageStream(
+    String sessionId,
+    String content, {
+    CancelToken? cancelToken,
+  }) => stream;
+}
+
+class DelayedPersistingChatRepository extends SendChatRepository {
+  DelayedPersistingChatRepository()
+    : super(
+        stream: Stream<String>.error(const FormatException('connection lost')),
+        savedHistory: [
+          ChatMessage(role: 'user', content: 'Pertanyaan'),
+          ChatMessage(role: 'assistant', content: 'Jawaban tersimpan'),
+        ],
+      );
+
+  @override
+  Future<List<ChatMessage>> getHistory(String sessionId) async {
+    historyReads++;
+    return historyReads <= 2 ? [] : savedHistory;
   }
 }
 
@@ -88,4 +133,61 @@ void main() {
       }
     },
   );
+
+  test(
+    'keeps streamed answer without making another history request',
+    () async {
+      final repository = SendChatRepository(
+        stream: Stream.fromIterable(['Jawaban ', 'AI']),
+        savedHistory: const [],
+      );
+      final controller = ChatController(repository);
+      await controller.initSession('material');
+      final initialHistoryReads = repository.historyReads;
+
+      await controller.sendMessage('Pertanyaan');
+
+      expect(controller.state.messages.map((message) => message.content), [
+        'Pertanyaan',
+        'Jawaban AI',
+      ]);
+      expect(controller.state.error, isNull);
+      expect(repository.historyReads, initialHistoryReads);
+      controller.dispose();
+    },
+  );
+
+  test(
+    'recovers the saved answer when the stream ends with an error',
+    () async {
+      final repository = SendChatRepository(
+        stream: Stream<String>.error(const FormatException('connection lost')),
+        savedHistory: [
+          ChatMessage(role: 'user', content: 'Pertanyaan'),
+          ChatMessage(role: 'assistant', content: 'Jawaban tersimpan'),
+        ],
+      );
+      final controller = ChatController(repository);
+      await controller.initSession('material');
+
+      await controller.sendMessage('Pertanyaan');
+
+      expect(controller.state.messages.last.content, 'Jawaban tersimpan');
+      expect(controller.state.error, isNull);
+      controller.dispose();
+    },
+  );
+
+  test('waits for persistence before showing a stream failure', () async {
+    final repository = DelayedPersistingChatRepository();
+    final controller = ChatController(repository);
+    await controller.initSession('material');
+
+    await controller.sendMessage('Pertanyaan');
+
+    expect(controller.state.messages.last.content, 'Jawaban tersimpan');
+    expect(controller.state.error, isNull);
+    expect(repository.historyReads, 3);
+    controller.dispose();
+  });
 }

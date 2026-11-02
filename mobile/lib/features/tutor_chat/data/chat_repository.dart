@@ -64,7 +64,10 @@ class ChatRepository {
       options: Options(responseType: ResponseType.stream),
     );
     yield* decodeChatStream(
-      response.data!.stream.timeout(const Duration(seconds: 60)),
+      // The model can take a while before producing its first token. A short
+      // idle timeout turns a slow, still-running generation into a false
+      // delivery failure even though the server later saves the answer.
+      response.data!.stream.timeout(const Duration(minutes: 3)),
     );
   }
 }

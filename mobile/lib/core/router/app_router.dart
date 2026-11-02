@@ -7,6 +7,7 @@ export '../widgets/app_navigation_bar.dart';
 
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/materials/presentation/materials_screen.dart';
+import '../../features/materials/presentation/material_detail_screen.dart';
 import '../../features/summary/presentation/summary_screen.dart';
 import '../../features/flashcard/presentation/flashcards_screen.dart';
 import '../../features/quiz/presentation/quiz_screen.dart';
@@ -84,6 +85,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: '/materials/:id/detail',
+        builder: (context, state) =>
+            MaterialDetailScreen(materialId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/materials/:id/summary',
