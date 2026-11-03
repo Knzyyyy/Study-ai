@@ -263,13 +263,13 @@ void main() {
     }
     await tester.ensureVisible(
       find.byTooltip(
-        'Hapus materi Long material title for narrow dashboard layout old',
+        'Aksi materi Long material title for narrow dashboard layout old',
       ),
     );
     final lastFile = find
         .ancestor(
           of: find.byTooltip(
-            'Hapus materi Long material title for narrow dashboard layout old',
+            'Aksi materi Long material title for narrow dashboard layout old',
           ),
           matching: find.byType(Container),
         )

@@ -458,6 +458,94 @@ final materialsListProvider = FutureProvider<List<MaterialModel>>((ref) async {
   return response.map((json) => MaterialModel.fromJson(json)).toList();
 });
 
+Future<void> _renameMaterial(
+  BuildContext context,
+  WidgetRef ref,
+  MaterialModel material,
+) async {
+  final newTitle = await showDialog<String>(
+    context: context,
+    builder: (_) => _RenameMaterialDialog(initialTitle: material.title),
+  );
+
+  final title = newTitle?.trim();
+  if (title == null || title.isEmpty || title == material.title) return;
+
+  try {
+    final updated = await Supabase.instance.client
+        .from('materials')
+        .update({'title': title})
+        .eq('id', material.id)
+        .select('id')
+        .maybeSingle();
+    if (updated == null) {
+      throw Exception('Materi tidak ditemukan atau tidak dapat diubah.');
+    }
+    ref.invalidate(materialsListProvider);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nama materi berhasil diubah.')),
+      );
+    }
+  } catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal mengganti nama materi: $error')),
+      );
+    }
+  }
+}
+
+class _RenameMaterialDialog extends StatefulWidget {
+  const _RenameMaterialDialog({required this.initialTitle});
+
+  final String initialTitle;
+
+  @override
+  State<_RenameMaterialDialog> createState() => _RenameMaterialDialogState();
+}
+
+class _RenameMaterialDialogState extends State<_RenameMaterialDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialTitle);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() => Navigator.pop(context, _controller.text.trim());
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Ganti nama materi'),
+    content: TextField(
+      controller: _controller,
+      autofocus: true,
+      maxLength: 120,
+      textCapitalization: TextCapitalization.sentences,
+      decoration: const InputDecoration(
+        labelText: 'Nama materi',
+        hintText: 'Masukkan nama baru',
+      ),
+      onSubmitted: (_) => _submit(),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Batal'),
+      ),
+      FilledButton(onPressed: _submit, child: const Text('Simpan')),
+    ],
+  );
+}
+
 class MaterialsLibraryScreen extends StatelessWidget {
   const MaterialsLibraryScreen({super.key});
 
@@ -1154,20 +1242,47 @@ class _CanvasMaterialsLibraryScreenState
                 ),
               ),
               const SizedBox(width: 4),
-              IconButton(
-                tooltip: 'Hapus materi ${material.title}',
-                visualDensity: VisualDensity.compact,
-                constraints: const BoxConstraints.tightFor(
-                  width: 34,
-                  height: 34,
-                ),
+              PopupMenuButton<String>(
+                tooltip: 'Aksi materi ${material.title}',
                 padding: EdgeInsets.zero,
-                onPressed: () => _deleteMaterial(material),
-                icon: Icon(
-                  Icons.more_horiz_rounded,
-                  size: 20,
-                  color: foreground,
+                iconSize: 20,
+                icon: Icon(Icons.more_horiz_rounded, color: foreground),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
+                onSelected: (value) {
+                  if (value == 'rename') {
+                    _renameMaterial(context, ref, material);
+                  } else if (value == 'delete') {
+                    _deleteMaterial(material);
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: 'rename',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_outlined, size: 18),
+                        SizedBox(width: 8),
+                        Text('Ganti nama'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.delete_outline_rounded,
+                          size: 18,
+                          color: Color(0xFFEF4444),
+                        ),
+                        SizedBox(width: 8),
+                        Text('Hapus materi'),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -1850,7 +1965,7 @@ class HomeScreen extends ConsumerWidget {
                                   ),
                                 ),
                                 PopupMenuButton<String>(
-                                  tooltip: 'Hapus materi ${material.title}',
+                                  tooltip: 'Aksi materi ${material.title}',
                                   icon: Icon(
                                     Icons.more_vert_rounded,
                                     color: dark
@@ -1861,11 +1976,23 @@ class HomeScreen extends ConsumerWidget {
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   onSelected: (value) {
-                                    if (value == 'delete') {
+                                    if (value == 'rename') {
+                                      _renameMaterial(context, ref, material);
+                                    } else if (value == 'delete') {
                                       _deleteMaterial(context, ref, material);
                                     }
                                   },
                                   itemBuilder: (context) => const [
+                                    PopupMenuItem(
+                                      value: 'rename',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.edit_outlined, size: 18),
+                                          SizedBox(width: 8),
+                                          Text('Ganti nama'),
+                                        ],
+                                      ),
+                                    ),
                                     PopupMenuItem(
                                       value: 'delete',
                                       child: Row(
