@@ -1,6 +1,8 @@
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/study_feature_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../home/presentation/home_screen.dart' show materialsListProvider;
 import 'flashcard_controller.dart';
 import '../data/flashcard_repository.dart';
 
@@ -42,14 +44,19 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
   @override
   Widget build(BuildContext context) {
     final flashcardsAsync = ref.watch(flashcardsProvider(widget.materialId));
+    final materialTitle = ref
+        .watch(materialsListProvider)
+        .valueOrNull
+        ?.where((material) => material.id == widget.materialId)
+        .firstOrNull
+        ?.title;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        elevation: 0,
-        title: const Text('Flashcard Belajar'),
+      appBar: StudyFeatureAppBar(
+        title: 'Latihan Flashcard',
+        subtitle: materialTitle,
+        onBack: () => Navigator.of(context).maybePop(),
         actions: [
           IconButton(
             icon: const Icon(Icons.auto_awesome),

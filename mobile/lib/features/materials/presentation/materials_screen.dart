@@ -147,7 +147,6 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
     final selectedCourse = validCourseSelection(candidate, courses)
         ? candidate
         : null;
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
     final topInset = MediaQuery.paddingOf(context).top;
 
     final canSubmit =
@@ -168,7 +167,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(20, topInset + 20, 20, 148 + bottomInset),
+        padding: EdgeInsets.fromLTRB(20, topInset + 20, 20, 110),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

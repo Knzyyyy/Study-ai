@@ -1,10 +1,13 @@
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/study_feature_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../home/presentation/home_screen.dart' show materialsListProvider;
 import '../../materials/domain/material_model.dart';
+import '../../materials/presentation/courses.dart';
+import '../../materials/presentation/material_picker_bottom_sheet.dart';
 import 'chat_controller.dart';
 
 class _TypingIndicator extends StatefulWidget {
@@ -130,48 +133,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  Future<void> _chooseMaterial(List<MaterialModel> materials) async {
-    final readyMaterials = materials.where((item) => item.status == 'done');
-    final selected = await showModalBottomSheet<MaterialModel>(
+  Future<void> _chooseMaterial(
+    List<MaterialModel> materials,
+    List<Course> courses,
+  ) async {
+    final selected = await showMaterialPickerBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-          children: [
-            const Text(
-              'Pilih materi',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 12),
-            for (final material in readyMaterials)
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                leading: const CircleAvatar(
-                  backgroundColor: AppColors.lavenderSoft,
-                  child: Icon(
-                    Icons.description_outlined,
-                    color: AppColors.primaryDark,
-                  ),
-                ),
-                title: Text(
-                  material.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(material.fileType.toUpperCase()),
-                onTap: () => Navigator.pop(context, material),
-              ),
-            if (!readyMaterials.any((_) => true))
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
-                child: Text('Belum ada materi yang siap dipelajari.'),
-              ),
-          ],
-        ),
-      ),
+      materials: materials,
+      courses: courses,
     );
     if (selected != null && mounted) {
       context.go('/materials/${selected.id}/chat');
@@ -183,6 +152,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final chatState = ref.watch(chatControllerProvider);
     final controller = ref.read(chatControllerProvider.notifier);
     final materials = ref.watch(materialsListProvider).valueOrNull ?? [];
+    final courses = ref.watch(coursesProvider).valueOrNull ?? const <Course>[];
     String? materialTitle;
     for (final material in materials) {
       if (material.id == widget.materialId) {
@@ -196,40 +166,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        titleSpacing: 0,
-        leading: IconButton(
-          tooltip: 'Kembali',
-          onPressed: () => context.pop(),
-          icon: const Icon(Icons.arrow_back_rounded),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'AI Tutor',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-            ),
-            Text(
-              materialTitle ?? 'Belajar dari materi pilihanmu',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.inkSecondary,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          ],
-        ),
+      appBar: StudyFeatureAppBar(
+        title: 'Tanya AI Tutor',
+        subtitle: materialTitle ?? 'Belajar dari materi pilihanmu',
+        onBack: () => context.pop(),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: OutlinedButton(
-              onPressed: () => _chooseMaterial(materials),
+              onPressed: () => _chooseMaterial(materials, courses),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primary,
                 side: const BorderSide(color: AppColors.borderLine),

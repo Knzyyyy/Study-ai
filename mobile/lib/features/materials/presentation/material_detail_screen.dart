@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/study_feature_app_bar.dart';
 import '../../flashcard/presentation/flashcard_controller.dart';
 import '../../home/presentation/home_screen.dart';
 import '../domain/material_model.dart';
@@ -28,18 +29,9 @@ class MaterialDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        title: const Text(
-          'Detail materi',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-        ),
-        titleSpacing: 8,
-        backgroundColor: AppColors.surface,
-        leading: IconButton(
-          tooltip: 'Kembali',
-          onPressed: () => context.pop(),
-          icon: const Icon(Icons.arrow_back_rounded),
-        ),
+      appBar: StudyFeatureAppBar(
+        title: 'Detail materi',
+        onBack: () => context.pop(),
         actions: [
           IconButton(
             tooltip: 'Muat ulang detail',

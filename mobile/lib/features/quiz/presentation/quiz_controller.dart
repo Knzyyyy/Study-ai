@@ -54,7 +54,12 @@ class QuizController extends StateNotifier<QuizState> {
 
   int _revision = 0;
 
-  Future<void> startQuiz(String materialId, {bool generateNew = false}) async {
+  Future<void> startQuiz(
+    String materialId, {
+    bool generateNew = false,
+    int amount = 10,
+    String difficulty = 'sedang',
+  }) async {
     if (state.isLoading) return;
     final revision = ++_revision;
     state = QuizState(isLoading: true);
@@ -63,7 +68,13 @@ class QuizController extends StateNotifier<QuizState> {
           ? null
           : await _repository.findQuiz(materialId);
       if (!mounted || revision != _revision) return;
-      final quizId = existingId ?? await _repository.generateQuiz(materialId);
+      final quizId =
+          existingId ??
+          await _repository.generateQuiz(
+            materialId,
+            amount: amount,
+            difficulty: difficulty,
+          );
       if (!mounted || revision != _revision) return;
       final quizData = await _repository.getQuiz(quizId);
       if (!mounted || revision != _revision) return;
@@ -74,8 +85,16 @@ class QuizController extends StateNotifier<QuizState> {
     }
   }
 
-  Future<void> startNewQuiz(String materialId) =>
-      startQuiz(materialId, generateNew: true);
+  Future<void> startNewQuiz(
+    String materialId, {
+    int amount = 10,
+    String difficulty = 'sedang',
+  }) => startQuiz(
+    materialId,
+    generateNew: true,
+    amount: amount,
+    difficulty: difficulty,
+  );
 
   // Menyimpan pilihan user secara lokal di HP
   void selectAnswer(String questionId, int optionIndex) {

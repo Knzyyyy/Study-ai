@@ -89,7 +89,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('0'), findsOneWidget);
     expect(find.text('Belum latihan'), findsOneWidget);
-    expect(find.text('Flashcard direview: 0'), findsOneWidget);
+    expect(find.text('Flashcard direview'), findsOneWidget);
+    expect(find.text('0 Kartu'), findsOneWidget);
     expect(find.text('0%'), findsNothing);
   });
 

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/widgets/study_feature_app_bar.dart';
+import '../../home/presentation/home_screen.dart' show materialsListProvider;
 import '../data/quiz_repository.dart';
 import '../domain/quiz_model.dart';
 
@@ -47,10 +50,8 @@ class QuizHistory extends ConsumerWidget {
                     'Skor ${attempt.score} • ${attempt.createdAt ?? 'Tanggal tidak tersedia'}',
                   ),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => QuizReviewScreen(attemptId: attempt.id),
-                    ),
+                  onTap: () => context.push<void>(
+                    '/quiz-attempts/${attempt.id}/review?material_id=$materialId',
                   ),
                 ),
             ],
@@ -61,12 +62,26 @@ class QuizHistory extends ConsumerWidget {
 
 class QuizReviewScreen extends ConsumerWidget {
   final String attemptId;
-  const QuizReviewScreen({super.key, required this.attemptId});
+  final String? materialId;
+  const QuizReviewScreen({super.key, required this.attemptId, this.materialId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final materialTitle = materialId == null
+        ? null
+        : ref
+              .watch(materialsListProvider)
+              .valueOrNull
+              ?.where((material) => material.id == materialId)
+              .firstOrNull
+              ?.title;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Pembahasan Kuis')),
+      appBar: StudyFeatureAppBar(
+        title: 'Pembahasan Kuis',
+        subtitle: materialTitle,
+        onBack: () => context.pop(),
+      ),
       body: ref
           .watch(quizReviewProvider(attemptId))
           .when(

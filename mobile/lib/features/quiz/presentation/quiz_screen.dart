@@ -1,16 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/study_feature_app_bar.dart';
+import '../../home/presentation/home_screen.dart' show materialsListProvider;
 import 'quiz_controller.dart';
 import 'quiz_review_screen.dart';
 
 class QuizScreen extends ConsumerWidget {
   final String materialId;
+  final int amount;
+  final String difficulty;
+  final bool generateNew;
 
-  const QuizScreen({super.key, required this.materialId});
+  const QuizScreen({
+    super.key,
+    required this.materialId,
+    this.amount = 10,
+    this.difficulty = 'sedang',
+    this.generateNew = false,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final materialTitle = ref
+        .watch(materialsListProvider)
+        .valueOrNull
+        ?.where((material) => material.id == materialId)
+        .firstOrNull
+        ?.title;
     final progress = ref.watch(quizProgressProvider);
     final progressText =
         progress.valueOrNull?[materialId]?.summary ??
@@ -23,11 +41,10 @@ class QuizScreen extends ConsumerWidget {
     // 1. Tampilan Saat Loading (Generate / Submit)
     if (quizState.isLoading) {
       return Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.white,
-          elevation: 0,
-          title: const Text('Kuis AI'),
+        appBar: StudyFeatureAppBar(
+          title: 'Kuis AI',
+          subtitle: materialTitle,
+          onBack: () => context.pop(),
         ),
         body: const Center(
           child: Column(
@@ -49,7 +66,11 @@ class QuizScreen extends ConsumerWidget {
       final total = quizState.finalResult!['total'];
 
       return Scaffold(
-        appBar: AppBar(title: const Text('Hasil Kuis')),
+        appBar: StudyFeatureAppBar(
+          title: 'Hasil Kuis',
+          subtitle: materialTitle,
+          onBack: () => context.pop(),
+        ),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -80,13 +101,8 @@ class QuizScreen extends ConsumerWidget {
                 Text(progressText),
                 const SizedBox(height: 32),
                 ElevatedButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => QuizReviewScreen(
-                        attemptId:
-                            quizState.finalResult!['attempt_id'] as String,
-                      ),
-                    ),
+                  onPressed: () => context.push<void>(
+                    '/quiz-attempts/${quizState.finalResult!['attempt_id']}/review?material_id=$materialId',
                   ),
                   child: const Text('Lihat Pembahasan'),
                 ),
@@ -107,7 +123,11 @@ class QuizScreen extends ConsumerWidget {
     // 3. Tampilan Awal (Belum mulai kuis)
     if (quizState.activeQuiz == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Kuis Latihan')),
+        appBar: StudyFeatureAppBar(
+          title: 'Kuis Latihan',
+          subtitle: materialTitle,
+          onBack: () => context.pop(),
+        ),
         body: Center(
           child: ListView(
             padding: const EdgeInsets.all(24),
@@ -133,14 +153,29 @@ class QuizScreen extends ConsumerWidget {
                 ),
               const SizedBox(height: 24),
               ElevatedButton.icon(
-                onPressed: () => quizController.startQuiz(materialId),
+                onPressed: () => generateNew
+                    ? quizController.startNewQuiz(
+                        materialId,
+                        amount: amount,
+                        difficulty: difficulty,
+                      )
+                    : quizController.startQuiz(
+                        materialId,
+                        amount: amount,
+                        difficulty: difficulty,
+                      ),
                 icon: const Icon(Icons.play_arrow),
                 label: const Text('Mulai Kuis'),
               ),
-              TextButton(
-                onPressed: () => quizController.startNewQuiz(materialId),
-                child: const Text('Buat Kuis Baru (10 Soal)'),
-              ),
+              if (!generateNew)
+                TextButton(
+                  onPressed: () => quizController.startNewQuiz(
+                    materialId,
+                    amount: amount,
+                    difficulty: difficulty,
+                  ),
+                  child: Text('Buat Kuis Baru ($amount Soal)'),
+                ),
               const SizedBox(height: 24),
               Text(progressText),
               if (progress.hasError)
@@ -163,7 +198,11 @@ class QuizScreen extends ConsumerWidget {
     final isAllAnswered = quizState.selectedAnswers.length == questions.length;
 
     return Scaffold(
-      appBar: AppBar(title: Text(quiz.title)),
+      appBar: StudyFeatureAppBar(
+        title: quiz.title,
+        subtitle: materialTitle,
+        onBack: () => context.pop(),
+      ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: questions.length + 1, // +1 untuk tombol Submit di bawah

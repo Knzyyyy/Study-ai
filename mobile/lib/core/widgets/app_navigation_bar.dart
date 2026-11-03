@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
 class AppNavigationBar extends StatelessWidget {
+  static const double reservedHeight = 88;
+
   const AppNavigationBar({
     super.key,
     required this.selectedIndex,
@@ -27,7 +29,7 @@ class AppNavigationBar extends StatelessWidget {
     return SafeArea(
       top: false,
       child: SizedBox(
-        height: 84,
+        height: reservedHeight,
         child: Align(
           alignment: Alignment.bottomCenter,
           child: Padding(
@@ -36,7 +38,7 @@ class AppNavigationBar extends StatelessWidget {
               constraints: const BoxConstraints(maxWidth: 480),
               child: SizedBox(
                 width: double.infinity,
-                height: 56,
+                height: 65,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: const Color(0xFFEFECE6).withValues(alpha: .95),
@@ -72,8 +74,8 @@ class AppNavigationBar extends StatelessWidget {
                               child: Center(
                                 child: AnimatedContainer(
                                   duration: duration,
-                                  width: upload ? 52 : 56,
-                                  height: upload ? 52 : 48,
+                                  width: upload ? 52 : 60,
+                                  height: 52,
                                   decoration: BoxDecoration(
                                     color: upload
                                         ? null
@@ -125,7 +127,7 @@ class AppNavigationBar extends StatelessWidget {
                                       child: Center(
                                         child: Icon(
                                           destinations[index].$1,
-                                          size: upload ? 26 : 22,
+                                          size: upload ? 26 : 24,
                                           color: upload
                                               ? Colors.white
                                               : AppColors.charcoal.withValues(

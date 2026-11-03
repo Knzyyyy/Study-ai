@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/study_visuals.dart';
 import '../../materials/domain/material_model.dart';
 import '../../materials/presentation/courses.dart';
+import '../../materials/presentation/material_picker_bottom_sheet.dart';
 import '../../quiz/domain/quiz_model.dart';
 import '../../quiz/presentation/quiz_controller.dart';
 import '../../flashcard/presentation/flashcard_controller.dart';
@@ -117,7 +118,7 @@ class HomeStatistics extends ConsumerWidget {
           final score = weightedQuizScore(items.values);
           return score == null
               ? 'Belum ada skor'
-              : '${score.toStringAsFixed(1)}%';
+              : '${score.toStringAsFixed(1)}/100';
         }),
         () => ref.invalidate(quizProgressProvider),
       ),
@@ -192,9 +193,12 @@ class CourseProgressCard extends ConsumerWidget {
           data: (items) {
             try {
               final value = courseProgress(materials, items);
+              final averageLabel = value.mean == null
+                  ? '—'
+                  : '${value.mean!.toStringAsFixed(1)}/100';
               return Text(
                 '${value.practiced}/${value.total} materi dilatih • '
-                'Rata-rata skor terbaru: ${value.mean?.toStringAsFixed(1) ?? "—"}${value.mean == null ? "" : "%"}'
+                'Rata-rata skor terbaru: $averageLabel'
                 '\n${value.practiced == 0 ? "Belum latihan" : "Hanya materi dilatih; skor terbaru tidak lengkap ditampilkan —"}'
                 '${value.unknownDates == 0 ? "" : "\nTanggal terbaru tidak tersedia: ${value.unknownDates} materi"}',
               );
@@ -289,54 +293,74 @@ class _HomeProgressCard extends ConsumerWidget {
   }
 }
 
-class _QuickActions extends StatelessWidget {
-  const _QuickActions({required this.material});
-
-  final MaterialModel? material;
+class _QuickActions extends ConsumerWidget {
+  const _QuickActions();
 
   @override
-  Widget build(BuildContext context) {
-    final id = material?.id;
-    Widget action(String label, IconData icon, String suffix) => Expanded(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final materials =
+        ref
+            .watch(materialsListProvider)
+            .valueOrNull
+            ?.where((material) => material.status == 'done')
+            .toList() ??
+        const <MaterialModel>[];
+    final courses = ref.watch(coursesProvider).valueOrNull ?? const <Course>[];
+
+    Widget action({
+      required String label,
+      required IconData icon,
+      required String suffix,
+      required Color iconBackground,
+      required Color iconColor,
+      bool dark = false,
+    }) => Expanded(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Material(
-          color: suffix == 'chat' ? AppColors.charcoal : Colors.white,
+          color: dark ? AppColors.charcoal : Colors.white,
           borderRadius: BorderRadius.circular(24),
           child: InkWell(
             borderRadius: BorderRadius.circular(24),
-            onTap:
-                id == null ||
-                    (suffix != 'summary' &&
-                        suffix != 'flashcards' &&
-                        suffix != 'chat')
-                ? null
-                : () => context.push('/materials/$id/$suffix'),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+            onTap: () async {
+              final material = await showMaterialPickerBottomSheet(
+                context: context,
+                materials: materials,
+                courses: courses,
+              );
+              if (material != null && context.mounted) {
+                context.push('/materials/${material.id}/$suffix');
+              }
+            },
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 122),
+              padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                border: dark
+                    ? null
+                    : Border.all(color: const Color(0xFFE9E1D8)),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    icon,
-                    size: 24,
-                    color: id == null
-                        ? AppColors.inkMeta
-                        : suffix == 'chat'
-                        ? AppColors.peach
-                        : AppColors.primaryDark,
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: iconBackground,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, size: 19, color: iconColor),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   Text(
                     label,
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: id == null
-                          ? AppColors.inkMeta
-                          : suffix == 'chat'
-                          ? Colors.white
-                          : AppColors.ink,
+                      height: 1.35,
+                      fontWeight: FontWeight.w700,
+                      color: dark ? Colors.white : AppColors.ink,
                     ),
                   ),
                 ],
@@ -347,11 +371,40 @@ class _QuickActions extends StatelessWidget {
       ),
     );
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        action('Ringkasan', Icons.article_outlined, 'summary'),
-        action('Flashcard', Icons.style_outlined, 'flashcards'),
-        action('Tanya Tutor', Icons.chat_bubble_outline_rounded, 'chat'),
+        const Text(
+          'Aksi cepat',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            action(
+              label: 'Ringkasan AI',
+              icon: Icons.description_outlined,
+              suffix: 'summary',
+              iconBackground: const Color(0xFFFFF0E7),
+              iconColor: const Color(0xFFE47B41),
+            ),
+            action(
+              label: 'Latihan flashcard',
+              icon: Icons.copy_all_outlined,
+              suffix: 'flashcards',
+              iconBackground: AppColors.lavenderSoft,
+              iconColor: AppColors.primaryDark,
+            ),
+            action(
+              label: 'Tanya AI Tutor',
+              icon: Icons.auto_awesome,
+              suffix: 'chat',
+              iconBackground: const Color(0xFF45484C),
+              iconColor: AppColors.peach,
+              dark: true,
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -646,7 +699,7 @@ class _CanvasMaterialsLibraryScreenState
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.only(bottom: 120),
+          padding: const EdgeInsets.only(bottom: 110),
           key: const ValueKey('materials-library-scroll-view'),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1447,8 +1500,6 @@ class HomeScreen extends ConsumerWidget {
     const primary = AppColors.primaryDark;
     final search = materialsOnly ? ref.watch(_materialSearchProvider) : '';
     final status = materialsOnly ? ref.watch(_materialStatusProvider) : null;
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
-
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
@@ -1462,7 +1513,7 @@ class HomeScreen extends ConsumerWidget {
               Icon(
                 Icons.auto_awesome_rounded,
                 color: Theme.of(context).colorScheme.primary,
-                size: 22,
+                size: 24,
               ),
             if (!materialsOnly) const SizedBox(width: 8),
             Expanded(
@@ -1471,7 +1522,7 @@ class HomeScreen extends ConsumerWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 24,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -1501,10 +1552,7 @@ class HomeScreen extends ConsumerWidget {
         child: SingleChildScrollView(
           controller: scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.only(
-            top: materialsOnly ? 0 : 18,
-            bottom: 148 + bottomInset,
-          ),
+          padding: EdgeInsets.only(top: materialsOnly ? 0 : 18, bottom: 110),
           child: Column(
             children: [
               if (materialsOnly) ...[
@@ -1638,14 +1686,7 @@ class HomeScreen extends ConsumerWidget {
                         materials: materialsAsync.valueOrNull ?? const [],
                       ),
                       const SizedBox(height: 18),
-                      _QuickActions(
-                        material: latestHomeMaterials(
-                          (materialsAsync.valueOrNull ??
-                                  const <MaterialModel>[])
-                              .where((item) => item.status == 'done')
-                              .toList(),
-                        ).firstOrNull,
-                      ),
+                      const _QuickActions(),
                       const SizedBox(height: 18),
                       _HomeProgressCard(materials: materialsAsync.valueOrNull),
                       const SizedBox(height: 24),

@@ -11,6 +11,7 @@ import '../../features/materials/presentation/material_detail_screen.dart';
 import '../../features/summary/presentation/summary_screen.dart';
 import '../../features/flashcard/presentation/flashcards_screen.dart';
 import '../../features/quiz/presentation/quiz_screen.dart';
+import '../../features/quiz/presentation/quiz_review_screen.dart';
 import '../../features/tutor_chat/presentation/chat_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/quiz/presentation/quiz_hub_screen.dart';
@@ -103,13 +104,24 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/materials/:id/quiz',
-        builder: (context, state) =>
-            QuizScreen(materialId: state.pathParameters['id']!),
+        builder: (context, state) => QuizScreen(
+          materialId: state.pathParameters['id']!,
+          amount: int.tryParse(state.uri.queryParameters['amount'] ?? '') ?? 10,
+          difficulty: state.uri.queryParameters['difficulty'] ?? 'sedang',
+          generateNew: state.uri.queryParameters['generate_new'] == 'true',
+        ),
       ),
       GoRoute(
         path: '/materials/:id/chat',
         builder: (context, state) =>
             ChatScreen(materialId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/quiz-attempts/:attemptId/review',
+        builder: (context, state) => QuizReviewScreen(
+          attemptId: state.pathParameters['attemptId']!,
+          materialId: state.uri.queryParameters['material_id'],
+        ),
       ),
     ],
   );
