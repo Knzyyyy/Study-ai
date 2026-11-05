@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/study_visuals.dart';
+import '../data/auth_repository.dart';
 import 'auth_controller.dart';
+import 'reset_password_bottom_sheet.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -21,6 +23,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   StreamSubscription<AuthState>? _authSubscription;
   bool _obscurePassword = true;
   bool _rememberMe = false;
+  String? _loginError;
 
   @override
   void initState() {
@@ -53,12 +56,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
       return;
     }
-    if (await ref
-            .read(authControllerProvider.notifier)
-            .signIn(email, password) &&
-        mounted) {
+    final success = await ref
+        .read(authControllerProvider.notifier)
+        .signIn(email, password);
+    if (!mounted) return;
+    if (success) {
       context.go('/');
+      return;
     }
+    final error = ref.read(authControllerProvider).error;
+    setState(() => _loginError = _loginErrorMessage(error));
+  }
+
+  String _loginErrorMessage(Object? error) {
+    final message = error?.toString().toLowerCase() ?? '';
+    if (message.contains('invalid_credentials') ||
+        message.contains('invalid login credentials')) {
+      return 'Email atau kata sandi tidak cocok. Periksa kembali data masukmu.';
+    }
+    if (message.contains('email_not_confirmed')) {
+      return 'Konfirmasi emailmu terlebih dahulu sebelum masuk.';
+    }
+    if (message.contains('socketexception') ||
+        message.contains('timeoutexception') ||
+        message.contains('network')) {
+      return 'Koneksi bermasalah. Periksa internet lalu coba lagi.';
+    }
+    return 'Login belum berhasil. Periksa email dan kata sandimu, lalu coba lagi.';
   }
 
   Future<void> _handleGoogleLogin() async {
@@ -71,6 +95,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       SnackBar(content: Text(error?.toString() ?? 'Login Google gagal')),
     );
   }
+
+  Future<void> _showResetPassword() => showResetPasswordBottomSheet(
+    context: context,
+    initialEmail: _emailController.text.trim(),
+    sendResetEmail: ref.read(authRepositoryProvider).sendPasswordResetEmail,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -126,7 +156,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                                 const SizedBox(width: 8),
                                 const Text(
-                                  'MindSpark AI',
+                                  'AI Tutor',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 13,
@@ -310,6 +340,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     TextField(
                                       controller: _emailController,
                                       keyboardType: TextInputType.emailAddress,
+                                      onChanged: (_) {
+                                        if (_loginError != null) {
+                                          setState(() => _loginError = null);
+                                        }
+                                      },
                                       style: const TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w700,
@@ -348,6 +383,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     TextField(
                                       controller: _passwordController,
                                       obscureText: _obscurePassword,
+                                      onChanged: (_) {
+                                        if (_loginError != null) {
+                                          setState(() => _loginError = null);
+                                        }
+                                      },
                                       style: const TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w700,
@@ -388,6 +428,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         ),
                                       ),
                                     ),
+                                    if (_loginError != null) ...[
+                                      const SizedBox(height: 12),
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFFF1F0),
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
+                                          border: Border.all(
+                                            color: const Color(0xFFFDA29B),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const Icon(
+                                              Icons.error_outline_rounded,
+                                              size: 19,
+                                              color: Color(0xFFB42318),
+                                            ),
+                                            const SizedBox(width: 9),
+                                            Expanded(
+                                              child: Text(
+                                                _loginError!,
+                                                style: const TextStyle(
+                                                  color: Color(0xFF912018),
+                                                  fontSize: 12,
+                                                  height: 1.4,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                     const SizedBox(height: 6),
 
                                     // Baris Ingat Saya & Lupa Kata Sandi
@@ -424,7 +503,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         ),
                                         const Spacer(),
                                         TextButton(
-                                          onPressed: () {},
+                                          onPressed: _showResetPassword,
                                           child: const Text(
                                             'Lupa Kata Sandi?',
                                             style: TextStyle(
@@ -462,7 +541,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                             Text(
                                               authState.isLoading
                                                   ? 'Sedang masuk...'
-                                                  : 'Masuk ke MindSpark',
+                                                  : 'Masuk ke AI Tutor',
                                               style: const TextStyle(
                                                 fontSize: 15,
                                                 fontWeight: FontWeight.w800,
@@ -482,10 +561,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                                       ),
                                                       child:
                                                           CircularProgressIndicator(
-                                                        strokeWidth: 2.2,
-                                                        color:
-                                                            AppColors.charcoal,
-                                                      ),
+                                                            strokeWidth: 2.2,
+                                                            color: AppColors
+                                                                .charcoal,
+                                                          ),
                                                     )
                                                   : const Icon(
                                                       Icons
@@ -586,22 +665,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 20),
 
                         // Footer Daftar & Kebijakan
-                        RichText(
-                          text: const TextSpan(
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.inkSecondary,
-                            ),
-                            children: [
-                              TextSpan(text: 'Belum punya akun? '),
-                              TextSpan(
-                                text: 'Daftar gratis',
-                                style: TextStyle(
-                                  color: AppColors.primaryDark,
-                                  fontWeight: FontWeight.w800,
-                                ),
+                        GestureDetector(
+                          onTap: () => context.push('/register'),
+                          child: RichText(
+                            text: const TextSpan(
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.inkSecondary,
                               ),
-                            ],
+                              children: [
+                                TextSpan(text: 'Belum punya akun? '),
+                                TextSpan(
+                                  text: 'Daftar gratis',
+                                  style: TextStyle(
+                                    color: AppColors.primaryDark,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(height: 10),

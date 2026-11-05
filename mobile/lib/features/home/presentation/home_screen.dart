@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/study_visuals.dart';
 import '../../materials/domain/material_model.dart';
 import '../../materials/presentation/courses.dart';
@@ -885,17 +886,9 @@ class _CanvasMaterialsLibraryScreenState
       children: [
         Row(
           children: [
-            Material(
-              color: Colors.white.withValues(alpha: .22),
-              shape: const CircleBorder(),
-              child: IconButton(
-                tooltip: 'Kembali ke beranda',
-                onPressed: () => context.go('/'),
-                icon: const Icon(
-                  Icons.arrow_back_rounded,
-                  color: AppColors.charcoal,
-                ),
-              ),
+            AppBackButton(
+              tooltip: 'Kembali ke beranda',
+              onPressed: () => context.go('/'),
             ),
             const Spacer(),
             Flexible(

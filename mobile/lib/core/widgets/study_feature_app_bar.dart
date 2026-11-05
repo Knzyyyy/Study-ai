@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import 'app_back_button.dart';
 
 class StudyFeatureAppBar extends StatelessWidget
     implements PreferredSizeWidget {
@@ -33,10 +34,8 @@ class StudyFeatureAppBar extends StatelessWidget
     surfaceTintColor: Colors.transparent,
     elevation: 0,
     leading: showBackButton
-        ? IconButton(
-            tooltip: 'Kembali',
+        ? AppBackButton(
             onPressed: onBack ?? () => Navigator.of(context).maybePop(),
-            icon: const Icon(Icons.arrow_back_rounded),
           )
         : null,
     title: Column(

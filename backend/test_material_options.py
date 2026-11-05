@@ -104,7 +104,7 @@ class MaterialOptionsTest(unittest.TestCase):
                 self.assertEqual(cards.call_count, int(flashcards))
                 self.assertEqual(questions.call_count, int(quiz))
                 if flashcards:
-                    cards.assert_called_once_with("Extracted source")
+                    cards.assert_called_once_with("Extracted source", pages=pages)
                 if quiz:
                     questions.assert_called_once_with("Extracted source", 10, "medium")
                 tables = [call.args[0] for call in db.table.call_args_list]

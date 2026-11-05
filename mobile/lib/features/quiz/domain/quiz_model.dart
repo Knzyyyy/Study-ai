@@ -68,12 +68,25 @@ class QuizReviewQuestionModel {
   final int? selectedIndex;
   final int correctIndex;
   final String explanation;
+  final String? pageBadge;
 
   QuizReviewQuestionModel.fromJson(Map<String, dynamic> json)
     : question = QuizQuestionModel.fromJson(json),
       selectedIndex = json['selected_index'] as int?,
       correctIndex = json['correct_index'] as int,
-      explanation = json['explanation'] as String;
+      explanation = json['explanation'] as String,
+      pageBadge = _pageBadgeFromJson(json);
+
+  static String? _pageBadgeFromJson(Map<String, dynamic> json) {
+    final badge = json['page_badge'];
+    if (badge is String && badge.isNotEmpty) return badge;
+    final page = json['page_number'] ?? json['page'];
+    if (page is num) return 'Hal. ${page.toInt()}';
+    if (page is String && page.isNotEmpty) {
+      return page.startsWith('Hal.') ? page : 'Hal. $page';
+    }
+    return null;
+  }
 
   String get chosenOption {
     final index = selectedIndex;

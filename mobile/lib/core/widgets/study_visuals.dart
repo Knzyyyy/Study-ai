@@ -70,9 +70,15 @@ class CutoutStatCard extends StatelessWidget {
 }
 
 class StudyIllustration extends StatelessWidget {
-  const StudyIllustration({super.key, this.trophy = false, this.size = 110});
+  const StudyIllustration({
+    super.key,
+    this.trophy = false,
+    this.size = 110,
+    this.capColor,
+  });
   final bool trophy;
   final double size;
+  final Color? capColor;
 
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
@@ -106,9 +112,77 @@ class StudyIllustration extends StatelessWidget {
                 Icon(
                   trophy ? Icons.emoji_events_rounded : Icons.school_rounded,
                   size: size * .88,
-                  color: trophy ? const Color(0xFFFFAE42) : AppColors.hero,
+                  color: trophy
+                      ? const Color(0xFFFFAE42)
+                      : capColor ?? AppColors.hero,
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class TrophyBadgeIllustration extends StatelessWidget {
+  const TrophyBadgeIllustration({super.key, this.size = 100});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: SizedBox.square(
+      dimension: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .2),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: .65),
+                width: 1.5,
+              ),
+            ),
+          ),
+          Transform.rotate(
+            angle: .1,
+            child: Container(
+              width: size * .58,
+              height: size * .58,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFB642),
+                borderRadius: BorderRadius.circular(size * .2),
+                border: Border.all(color: AppColors.charcoal, width: 2),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x3316181D),
+                    offset: Offset(2, 3),
+                    blurRadius: 1,
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.emoji_events_rounded,
+                color: AppColors.charcoal,
+                size: size * .33,
+              ),
+            ),
+          ),
+          Positioned(
+            right: size * .04,
+            bottom: size * .15,
+            child: Container(
+              width: size * .12,
+              height: size * .12,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFB986),
+                shape: BoxShape.circle,
+              ),
             ),
           ),
         ],

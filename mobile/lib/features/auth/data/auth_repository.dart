@@ -19,6 +19,31 @@ class AuthRepository {
     }
   }
 
+  Future<AuthResponse> signUp({
+    required String fullName,
+    required String email,
+    required String password,
+  }) => _supabase.auth.signUp(
+    email: email,
+    password: password,
+    data: {'full_name': fullName},
+    emailRedirectTo: kIsWeb
+        ? Uri.base.origin
+        : 'io.supabase.tugaskhir://login-callback',
+  );
+
+  Future<void> sendPasswordResetEmail(String email) =>
+      _supabase.auth.resetPasswordForEmail(
+        email,
+        redirectTo: kIsWeb
+            ? '${Uri.base.origin}/reset-password'
+            : 'io.supabase.tugaskhir://password-reset',
+      );
+
+  Future<void> updatePassword(String password) async {
+    await _supabase.auth.updateUser(UserAttributes(password: password));
+  }
+
   Future<void> signInWithGoogle() async {
     final redirectTo = kIsWeb
         ? Uri.base.origin

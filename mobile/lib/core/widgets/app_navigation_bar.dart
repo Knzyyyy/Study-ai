@@ -33,12 +33,12 @@ class AppNavigationBar extends StatelessWidget {
         child: Align(
           alignment: Alignment.bottomCenter,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 480),
               child: SizedBox(
                 width: double.infinity,
-                height: 65,
+                height: 67,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: const Color(0xFFEFECE6).withValues(alpha: .95),

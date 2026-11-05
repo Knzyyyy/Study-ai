@@ -2,6 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from app.auth import get_current_user
+from app.schemas.flashcard import FlashcardReviewRequest
 from app.services.supabase_client import supabase
 from app.services.ai_service import generate_flashcards
 
@@ -29,9 +30,14 @@ def create_flashcards(material_id: str, user = Depends(get_current_user)):
     for sec in summary_data["sections"]:
         bahan_teks += f"- {sec['title']}\n"
     
-    # 3. Panggil Gemini AI (langsung ditunggu karena prosesnya cepat)
+    # Use original page text so generated cards can cite an actual page.
+    pages = supabase.table("material_pages").select(
+        "page_number, content_text"
+    ).eq("material_id", material_id).order("page_number").execute().data
+
+    # 3. Generate cards from the summary and page text.
     try:
-        flashcards_data = generate_flashcards(bahan_teks)
+        flashcards_data = generate_flashcards(bahan_teks, pages=pages)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
         
@@ -61,13 +67,29 @@ def get_flashcards(material_id: str, user = Depends(get_current_user)):
     # Ambil flashcards
     fc_res = supabase.table("flashcards").select("*").eq("material_id", material_id).execute()
     
-    reviews = supabase.table("flashcard_reviews").select("flashcard_id").eq("user_id", user.id).eq("material_id", material_id).execute()
-    reviewed_ids = {row["flashcard_id"] for row in reviews.data}
-    return [dict(card, studied=card["id"] in reviewed_ids) for card in fc_res.data]
+    reviews = supabase.table("flashcard_reviews").select("flashcard_id, known").eq("user_id", user.id).eq("material_id", material_id).execute()
+    review_by_id = {row["flashcard_id"]: row for row in reviews.data}
+    return [
+        dict(
+            card,
+            studied=(
+                review_by_id[card["id"]].get("known", True)
+                if card["id"] in review_by_id
+                else False
+            ),
+            reviewed=card["id"] in review_by_id,
+        )
+        for card in fc_res.data
+    ]
 
 
 @router.post("/{material_id}/flashcards/{flashcard_id}/studied")
-def mark_flashcard_studied(material_id: UUID, flashcard_id: UUID, user=Depends(get_current_user)):
+def mark_flashcard_studied(
+    material_id: UUID,
+    flashcard_id: UUID,
+    user=Depends(get_current_user),
+    review: FlashcardReviewRequest | None = None,
+):
     material_id, flashcard_id = str(material_id), str(flashcard_id)
     material = supabase.table("materials").select("id").eq("id", material_id).eq("user_id", user.id).execute()
     if not material.data:
@@ -76,11 +98,15 @@ def mark_flashcard_studied(material_id: UUID, flashcard_id: UUID, user=Depends(g
     if not card.data:
         raise HTTPException(status_code=404, detail="Flashcard tidak ditemukan")
     supabase.table("flashcard_reviews").upsert(
-        {"user_id": user.id, "flashcard_id": flashcard_id, "material_id": material_id},
+        {
+            "user_id": user.id,
+            "flashcard_id": flashcard_id,
+            "material_id": material_id,
+            "known": review.understood if review else True,
+        },
         on_conflict="user_id,flashcard_id",
-        ignore_duplicates=True,
     ).execute()
-    return {"studied": True}
+    return {"studied": review.understood if review else True}
 
 
 @router.get("/flashcards/reviews/count")

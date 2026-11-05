@@ -82,7 +82,7 @@ def process_material_background(material_id: str, user_id: str, options: Process
 
         source_text = "\n\n".join(p["content_text"] for p in pages)
         if options.generate_flashcards and not supabase.table("flashcards").select("id").eq("material_id", material_id).execute().data:
-            cards = generate_flashcards(source_text)
+            cards = generate_flashcards(source_text, pages=pages)
             if cards:
                 supabase.table("flashcards").insert([
                     {**card, "material_id": material_id} for card in cards

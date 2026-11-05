@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 from uuid import UUID
 
 from fastapi import HTTPException
+from app.schemas.flashcard import FlashcardReviewRequest
 
 
 class FlashcardReviewsTest(unittest.TestCase):
@@ -38,11 +39,29 @@ class FlashcardReviewsTest(unittest.TestCase):
             for _ in range(2):
                 self.assertEqual(self.router.mark_flashcard_studied(material, card, SimpleNamespace(id="user")), {"studied": True})
         db.table.return_value.upsert.assert_called_with(
-            {"user_id": "user", "flashcard_id": str(card), "material_id": str(material)},
-            on_conflict="user_id,flashcard_id", ignore_duplicates=True,
+            {"user_id": "user", "flashcard_id": str(card), "material_id": str(material), "known": True},
+            on_conflict="user_id,flashcard_id",
         )
         db.table.return_value.select.return_value.eq.return_value.eq.assert_any_call("user_id", "user")
         db.table.return_value.select.return_value.eq.return_value.eq.assert_any_call("material_id", str(material))
+
+    def test_mark_can_update_card_to_needs_review(self):
+        db = MagicMock()
+        db.table.return_value.select.return_value.eq.return_value.eq.return_value.execute.return_value.data = [{"id": "owned"}]
+        material = UUID(int=1)
+        card = UUID(int=2)
+        with patch.object(self.router, "supabase", db):
+            result = self.router.mark_flashcard_studied(
+                material,
+                card,
+                SimpleNamespace(id="user"),
+                FlashcardReviewRequest(understood=False),
+            )
+        self.assertEqual(result, {"studied": False})
+        db.table.return_value.upsert.assert_called_with(
+            {"user_id": "user", "flashcard_id": str(card), "material_id": str(material), "known": False},
+            on_conflict="user_id,flashcard_id",
+        )
 
     def test_missing_or_foreign_material_and_card_rejected(self):
         for responses in ([], [{"id": "owned"}]):

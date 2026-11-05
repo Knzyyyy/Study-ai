@@ -16,7 +16,18 @@ class FlashcardRepository {
   }
 
   Future<void> markStudied(String materialId, String flashcardId) async {
-    await _dio.post('/materials/$materialId/flashcards/$flashcardId/studied');
+    await reviewCard(materialId, flashcardId, understood: true);
+  }
+
+  Future<void> reviewCard(
+    String materialId,
+    String flashcardId, {
+    required bool understood,
+  }) async {
+    await _dio.post(
+      '/materials/$materialId/flashcards/$flashcardId/studied',
+      data: {'understood': understood},
+    );
   }
 
   Future<int> getReviewCount() async {

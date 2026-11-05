@@ -542,7 +542,8 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                           style: const TextStyle(
                             fontSize: 14,
                             height: 1.55,
-                            color: AppColors.inkSecondary,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.ink,
                           ),
                         ),
                       ),
@@ -606,7 +607,8 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
             style: const TextStyle(
               fontSize: 13,
               height: 1.5,
-              color: AppColors.inkSecondary,
+              fontWeight: FontWeight.w500,
+              color: AppColors.ink,
             ),
           ),
         ),

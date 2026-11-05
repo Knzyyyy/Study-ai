@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/auth_repository.dart';
 
+final passwordRecoveryModeProvider = StateProvider<bool>((ref) => false);
+final registrationLoginFlowProvider = StateProvider<bool>((ref) => false);
+
 class AuthController extends StateNotifier<AsyncValue<void>> {
   final AuthRepository _authRepository;
 
@@ -14,7 +17,7 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
       return true; // Berhasil login
     } catch (e, st) {
       state = AsyncValue.error(e, st);
-      return gagalLogin(e.toString());
+      return false;
     }
   }
 
@@ -28,11 +31,6 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
       state = AsyncValue.error(e, st);
       return false;
     }
-  }
-
-  bool gagalLogin(String error) {
-    // Helper kecil jika butuh handling tambahan
-    return false;
   }
 }
 

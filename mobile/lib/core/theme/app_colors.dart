@@ -22,4 +22,12 @@ abstract final class AppColors {
   static const progressSurface = Color(0xFFFBEAE0);
   static const progressBorder = Color(0xFFF4CEB8);
   static const white = Colors.white;
+  static const studySuccess = Color(0xFF047857);
+  static const studySuccessFill = Color(0xFF059669);
+  static const studySuccessSoft = Color(0xFFECFDF5);
+  static const studySuccessBorder = Color(0xFFA7F3D0);
+  static const studyReview = Color(0xFF92400E);
+  static const studyReviewSoft = Color(0xFFFFFBEB);
+  static const studyReviewBorder = Color(0xFFFDE68A);
+  static const studyReviewStrongBorder = Color(0xFFFBBF24);
 }

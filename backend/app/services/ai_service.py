@@ -90,16 +90,42 @@ berdasarkan materi berikut:
     return _retry(prompt, OverviewResponse, 0.4, max_retries).overview
 
 
-def generate_flashcards(summary_text: str, max_retries: int = 2) -> list[dict]:
+def generate_flashcards(
+    summary_text: str,
+    pages: list[dict] | None = None,
+    max_retries: int = 2,
+) -> list[dict]:
+    page_text = "\n\n".join(
+        f"[HALAMAN {page['page_number']}]\n{page['content_text']}"
+        for page in pages or []
+        if page.get("page_number") is not None and page.get("content_text")
+    )
+    source_text = page_text or summary_text
+    available_pages = {
+        page["page_number"]
+        for page in pages or []
+        if page.get("page_number") is not None and page.get("content_text")
+    }
     prompt = f"""
 Kamu adalah AI Tutor. Buat maksimal 10 flashcard Bahasa Indonesia dari materi berikut.
-Sisi depan berisi pertanyaan atau istilah, sisi belakang berisi jawaban atau definisi.
+Sisi depan berisi pertanyaan atau istilah. Sisi belakang berisi jawaban atau definisi.
+Tambahkan satu contoh singkat yang relevan bila materi mendukungnya; jika tidak, isi null.
+Untuk source_page, gunakan nomor halaman dari penanda [HALAMAN N] yang mendukung jawaban.
+Jika materi tidak memiliki penanda halaman, isi source_page dengan null. Jangan menebak nomor.
 
 Materi:
-{summary_text}
+{source_text}
 """
     result = _retry(prompt, FlashcardList, 0.4, max_retries)
-    return [card.model_dump() for card in result.flashcards]
+    cards = [card.model_dump() for card in result.flashcards]
+    if available_pages:
+        for card in cards:
+            if card["source_page"] not in available_pages:
+                card["source_page"] = None
+    else:
+        for card in cards:
+            card["source_page"] = None
+    return cards
 
 
 def generate_quiz_questions(summary_text: str, amount: int, difficulty: str, max_retries: int = 2) -> list[dict]:
