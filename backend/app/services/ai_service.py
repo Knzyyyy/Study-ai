@@ -28,6 +28,7 @@ def _strict_schema(schema: type) -> dict:
         if isinstance(value, dict):
             if value.get("type") == "object":
                 value["additionalProperties"] = False
+                value["required"] = list(value.get("properties", {}).keys())
             for child in value.values():
                 fix_objects(child)
         elif isinstance(value, list):

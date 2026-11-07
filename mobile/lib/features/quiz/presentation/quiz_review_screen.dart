@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/app_back_button.dart';
+import '../../../core/widgets/study_feature_app_bar.dart';
 import '../../home/presentation/home_screen.dart' show materialsListProvider;
 import '../data/quiz_repository.dart';
 import '../domain/quiz_model.dart';
@@ -368,6 +368,7 @@ class _QuizReviewScreenState extends ConsumerState<QuizReviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final reviewAsync = ref.watch(quizReviewProvider(widget.attemptId));
     final materialTitle = widget.materialId == null
         ? null
         : ref
@@ -386,47 +387,46 @@ class _QuizReviewScreenState extends ConsumerState<QuizReviewScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      body: SafeArea(
-        child: ref
-            .watch(quizReviewProvider(widget.attemptId))
-            .when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.primaryDark),
-              ),
-              error: (error, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.cloud_off_rounded,
-                        color: AppColors.terracotta,
-                        size: 36,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Gagal memuat pembahasan: $error',
-                        textAlign: TextAlign.center,
-                      ),
-                      TextButton(
-                        onPressed: () => ref.invalidate(
-                          quizReviewProvider(widget.attemptId),
-                        ),
-                        child: const Text('Coba lagi'),
-                      ),
-                    ],
-                  ),
+      appBar: StudyFeatureAppBar(
+        title: 'Hasil & Pembahasan',
+        subtitle: materialTitle ?? reviewAsync.valueOrNull?.attempt.title,
+        onBack: () => context.pop(),
+      ),
+      body: reviewAsync.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.primaryDark),
+        ),
+        error: (error, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.cloud_off_rounded,
+                  color: AppColors.terracotta,
+                  size: 36,
                 ),
-              ),
-              data: (review) => _buildReview(
-                context,
-                review: review,
-                materialTitle: materialTitle,
-                previousScore: previousScore,
-                comparisonLoading: history?.isLoading ?? false,
-              ),
+                const SizedBox(height: 12),
+                Text(
+                  'Gagal memuat pembahasan: $error',
+                  textAlign: TextAlign.center,
+                ),
+                TextButton(
+                  onPressed: () =>
+                      ref.invalidate(quizReviewProvider(widget.attemptId)),
+                  child: const Text('Coba lagi'),
+                ),
+              ],
             ),
+          ),
+        ),
+        data: (review) => _buildReview(
+          context,
+          review: review,
+          previousScore: previousScore,
+          comparisonLoading: history?.isLoading ?? false,
+        ),
       ),
     );
   }
@@ -442,7 +442,6 @@ class _QuizReviewScreenState extends ConsumerState<QuizReviewScreen> {
   Widget _buildReview(
     BuildContext context, {
     required QuizReviewModel review,
-    required String? materialTitle,
     required int? previousScore,
     required bool comparisonLoading,
   }) {
@@ -461,14 +460,8 @@ class _QuizReviewScreenState extends ConsumerState<QuizReviewScreen> {
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 34),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 34),
       children: [
-        _ReviewHeader(
-          title: 'Hasil & Pembahasan',
-          subtitle: materialTitle ?? review.attempt.title,
-          onBack: () => context.pop(),
-        ),
-        const SizedBox(height: 20),
         QuizScoreHero(
           score: review.attempt.score,
           correctCount: correctCount,
@@ -535,51 +528,6 @@ class _QuizReviewScreenState extends ConsumerState<QuizReviewScreen> {
       ],
     );
   }
-}
-
-class _ReviewHeader extends StatelessWidget {
-  const _ReviewHeader({
-    required this.title,
-    required this.subtitle,
-    required this.onBack,
-  });
-
-  final String title;
-  final String subtitle;
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      AppBackButton(tooltip: 'Kembali', onPressed: onBack),
-      const SizedBox(width: 12),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                color: AppColors.ink,
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            Text(
-              subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.inkSecondary,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    ],
-  );
 }
 
 class _ReviewQuestionCard extends StatelessWidget {

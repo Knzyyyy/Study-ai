@@ -40,6 +40,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   DateTime? _sessionStartedAt;
   DateTime? _sessionCompletedAt;
   Duration _elapsed = Duration.zero;
+  String? _reviewNavigationAttemptId;
   Timer? _timer;
 
   @override
@@ -52,6 +53,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
       _sessionStartedAt = null;
       _sessionCompletedAt = null;
       _elapsed = Duration.zero;
+      _reviewNavigationAttemptId = null;
     }
   }
 
@@ -134,6 +136,29 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
       final correct = (result['benar'] as num?)?.toInt() ?? 0;
       final total = (result['total'] as num?)?.toInt() ?? 0;
       final attemptId = result['attempt_id']?.toString() ?? '';
+
+      if (attemptId.isNotEmpty) {
+        if (_reviewNavigationAttemptId != attemptId) {
+          _reviewNavigationAttemptId = attemptId;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            quizController.reset();
+            context.pushReplacement(
+              '/quiz-attempts/$attemptId/review'
+              '?material_id=${Uri.encodeQueryComponent(widget.materialId)}'
+              '&duration_seconds=${_elapsed.inSeconds}'
+              '&difficulty=${Uri.encodeQueryComponent(widget.difficulty)}',
+            );
+          });
+        }
+        return const Scaffold(
+          backgroundColor: AppColors.surface,
+          body: Center(
+            child: CircularProgressIndicator(color: AppColors.primaryDark),
+          ),
+        );
+      }
+
       final history = ref.watch(quizHistoryProvider(widget.materialId));
       final previousScore = _previousScore(history.valueOrNull, attemptId);
 

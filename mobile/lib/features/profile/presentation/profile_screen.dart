@@ -689,6 +689,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title: 'Pusat Bantuan',
                   subtitle: 'Panduan penggunaan & FAQ mahasiswa',
                   background: const Color(0xFFF3EEE7),
+                  onTap: () => context.push<void>('/help'),
                 ),
               ],
             ),

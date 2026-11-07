@@ -19,6 +19,7 @@ import '../../features/tutor_chat/presentation/chat_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/quiz/presentation/quiz_hub_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
+import '../../features/help/presentation/help_center_screen.dart';
 
 final authStateChangeProvider = StreamProvider.autoDispose((ref) {
   return Supabase.instance.client.auth.onAuthStateChange;
@@ -132,6 +133,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/materials/:id/detail',
         builder: (context, state) =>
             MaterialDetailScreen(materialId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/help',
+        builder: (context, state) => const HelpCenterScreen(),
       ),
       GoRoute(
         path: '/materials/:id/summary',

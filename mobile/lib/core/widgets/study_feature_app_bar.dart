@@ -29,13 +29,17 @@ class StudyFeatureAppBar extends StatelessWidget
   Widget build(BuildContext context) => AppBar(
     automaticallyImplyLeading: false,
     toolbarHeight: toolbarHeight,
+    leadingWidth: showBackButton ? 72 : null,
     titleSpacing: showBackButton ? 8 : 20,
     backgroundColor: AppColors.surface,
     surfaceTintColor: Colors.transparent,
     elevation: 0,
     leading: showBackButton
-        ? AppBackButton(
-            onPressed: onBack ?? () => Navigator.of(context).maybePop(),
+        ? Padding(
+            padding: const EdgeInsets.only(left: 20, right: 8),
+            child: AppBackButton(
+              onPressed: onBack ?? () => Navigator.of(context).maybePop(),
+            ),
           )
         : null,
     title: Column(
